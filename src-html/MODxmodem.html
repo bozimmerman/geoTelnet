@@ -39,6 +39,7 @@ XMO_OTH	= $02
 ;* XMOrcvCrc		X-Modem Receive (CRC-16)
 ;* Inputs:
 ;*	A2	Vector - Receive a single byte in .a
+;*	A3	Vector - Received a good block
 ;*	A3	Vector - Received a bad block
 ;* Outputs:
 ;*	.x 	0 means A-OK, or abort/error
@@ -49,8 +50,9 @@ XMOrcvChk:	ldb	XMOXType,#0
 	jmp	XMOrcvSt
 XMOrcvCrc:	ldb	XMOXType,#1
 	ldb	XMOBufSize,#$85
-XMOrcvSt:	mvw	A2,XMOrcVec+1	; receive 1 byte in .a
-	mvw	A3,XMOerVec+1	; receive error block
+XMOrcvSt:	mvw	A2,XMORcVec+1	; receive 1 byte in .a
+	mvw	A3,XMORgVec+1	; receive good block
+	mvw	A4,XMOErVec+1	; receive error block
 	ldb	XMOUpDn,#1
 	jsr	XMOClear
 	jsr	XMOBufFlush
@@ -62,6 +64,7 @@ XMOrcvSt:	mvw	A2,XMOrcVec+1	; receive 1 byte in .a
 10$:	jmp	XMOrcvLp
 
 XMORcVec:	jmp	XMONada	; receive 1 byte
+XMORgVec:	jmp	XMONada	; good block receive bytes
 XMOErVec:	jmp	XMONada	; error block receive bytes
 XMONada:	rts	
 
@@ -137,6 +140,7 @@ XMOConRcv:	lda	XMOGood
 	cbi	XMOBufCt,#$80
 	bcc	10$
 	jsr	XMOBufFlush
+	jsr	XMORgVec
 	lda	#XMO_ACK
 	jsr	ComSPut
 	inc	XMOBlock

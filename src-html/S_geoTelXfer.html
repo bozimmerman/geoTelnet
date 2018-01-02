@@ -330,18 +330,62 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jmp	keySetup
 10$:	jsr	UseSystemFont
 	jsr	XDnBox
-	ldw	A2,#XUpFillBuf
-	ldw	A3,#XUpRead
-	ldw	A4,#XUpBadBlk
-	jsr	XMOsend
+	ldw	A2,#XDnRcvByte
+	ldw	A3,#XDnGooBlk
+	ldw	A4,#XDnBadBlk
+	jsr	XMOrcvCrc
 	cpx	#0
 	bne	15$
+	ldb	A2L,#PRG	; ***TODO
+	jsr	ClosSF
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	R0,#XDnDnTxt
 	jsr	OKBox
 	bra	20$
-15$:	jsr	ClrTrmScn	; clears the screen
+15$:	jsr	XDnFlush
+	ldb	A2L,#PRG	; ***TODO
+	jsr	ClosSF
+	jsr	ClrTrmScn	; clears the screen
+	jsr	scnReset	; will restore font
+	ldw	R0,#XDnErTxt
+	jsr	OKBox
+20$:	jsr	keySetup
+	rts
+
+XDnDnTxt:	.byte	27,"Download Complete!",27,0
+XDnErTxt:	.byte	27,"Download Cancelled.",27,0
+XDnFlTxt:	.byte	27,"File failure. Download cancelled",27,0
+
+
+XDnRcvByte:	pha
+	mvw	XBufWrPtr,A6
+	inw	XBufWrPtr
+	ldy	#0
+	pla
+	sta	(A6),y
+	rts	
+
+XDnFlush:	ldw	A2,#BACK_SCR_BASE
+	mvw	XBufWrPtr,A3
+	jsr	PutSMem
+	ldw	XBufWrPtr,#BACK_SCR_BASE
+	rts
+
+XDnGooBlk:	avw	#128,XBytesDone
+	jsr	XUpdBox
+	cwi	XBufWrPtr,#BACK_SCR_BASE+$1800
+	bcc	10$
+	jsr	XDnFlush
+10$:	rts
+
+
+XDnBadBlk:	inc	XErrors
+	jsr	XUpdBox
+	rts
+
+
+
 FBOXswdv:	jsr	FBOXswd2
 	cpx	#$00	;check for error!
 	beq	21$
