@@ -209,10 +209,7 @@ SafePutC:	pha
 
 
 
-SPutChar:	cmp	#27
-	bne	10$
-	jmp	AnsiStart
-10$:	pha
+SPutChar:	pha
 	lda	ansiDex
 	beq	11$
 	pla
@@ -222,7 +219,10 @@ SPutChar:	cmp	#27
 	pla
 12$:	jmp	TelnCont
 13$:	pla
-	cmp	#$ff
+	cmp	#27
+	bne	14$
+	jmp	AnsiStart
+14$:	cmp	#$ff
 	beq	12$
 	cmp	#$0d
 	bne	15$
@@ -367,11 +367,128 @@ CrsrStLn:	mvw	txtLeft,txtXY
 	rts
 
 
-TelnCont:	pha
-	; **TODO  telnState
-	pla
+TelnCont:	sty	TelnOut+1
+	sta	TelnCC+1
+	lda	telnState
+	bne	TelnChPt
+	ldw	telnStPt,#Tel1Ch
+TelnOut:	ldy	#0
 	rts
+TelnChPt:	mvw	telnStPt,A2
+TelnLoop:	ldy	#$00
+	lda	(A2),y
+	bne	10$
+	sta	telnState	; no match, so done
+	jmp	TelnOut
+10$:	cmp	#$80	; $80 is an Always action
+	beq	TelnAct
+TelnCC:	cmp	#$ff
+	beq	TelnAct
+	avw	#3,A2
+	jmp	TelnLoop
+TelnAct:	iny
+	lda	(A2),y
+	sta	telnStPt
+	sta	TelNDo+1
+	iny
+	lda	(A2),y
+	sta	telnStPt+1
+	and	#$80
+	bne	10$
+	jmp	TelnOut
+10$:	lda	(A2),y
+	and	#$7f
+	sta	TelNDo+2
+	ldb	telnState,#0
+TelnDo:	jmp	TelnDo
 
+
+
+	; initial state machine
+Tel1Ch:	.byte 251, <Tel2Ch, >Tel2Ch; WILL
+	.byte 252, <Tel3Ch, >Tel3Ch; WONT
+	.byte 253, <Tel4Ch, >Tel4Ch; DO
+	.byte 254, <Tel5Ch, >Tel5Ch; DONT
+	.byte 250, <Tel6Ch, >Tel6Ch; SB
+	.byte	0,0,0
+	; WILL
+Tel2Ch:	.byte	24, <TelWi_TT, >TelWi_TT + $80; TERMTYPE
+	.byte	1, <TelWi_Echo, >TelWi_Echo + $80; ECHO
+	.byte	$80, <TelWi_, >TelWi_	 + $80; everything else
+	.byte	0,0,0
+	; WONT
+Tel3Ch:	.byte	1, <TelWo_Echo, >TelWo_Echo + $80; echo
+	.byte	0,0,0	; nothing else to do
+	; DO
+Tel4Ch:	.byte	24, <TelDo_TT, >TelDo_TT + $80; TERMTYPE
+	.byte	1, <TelDo_Echo, >TelDo_Echo + $80; ECHO
+	.byte	$80, <TelDo_, >TelDo_	 + $80; everything else
+	.byte	0,0,0
+	; DONT
+Tel5Ch:	.byte	1, <TelDn_Echo, >TelDn_Echo + $80; echo
+	.byte	0,0,0	; nothing else to do
+	; SB
+Tel6Ch:	.byte	$80, <TelSB_, >TelSB_ + $80; save sub-type
+	.byte 255, <Tel7Ch, >Tel7Ch	; received end maybe?
+	.byte 0,0,0
+TelSBCh:	.byte 255, <Tel7Ch, >Tel7Ch	; maybe the end
+	.byte	$80, <TelSBCh, >TelSBCh; keep reading
+	.byte	0,0,0
+Tel7Ch:	.byte	240, <TelSB_Do, >TelSB_Do + $80; received end of SB!
+	.byte	$80, <TelSBCh, >TelSBCh; anything else, keep going
+	.byte	0,0,0
+
+
+TelSB_:	lda	TelnCC+1
+	sta	TelSB_Do+1
+	ldw	telnStPt,#TelSBCh
+	jmp	TelnOut
+
+TelSB_Do:	lda	#$00
+	cmp	#24
+	bne	10$
+	ldy	#0
+15$:	lda	TelSBttStr,y
+	jsr	ComSPut
+	iny
+	cpy	#10
+	bcc	15$
+	jmp	TelnOut
+10$:
+	jmp	TelnOut
+TelSBTTStr:	.byte	255,250,24,0,'a','n','s','i',255,240,0
+
+TelWi_TT:	ldw	R0,#TelDoTTStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelDoTTStr:	.byte	255,253,24,0
+
+TelWi_:	lda	TelnCC+1
+	sta	TelDotStr+2
+	ldw	R0,#TelDotStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelDotStr:	.byte	255,254,0,0
+
+TelWo_Echo:
+TelDn_Echo:	ldb	flgEcho,#1
+	jmp	TelnOut
+
+TelDo_TT:	ldw	R0,#TelWiTTStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelWiTTStr:	.byte	255,251,24,0
+
+TelDo_:	lda	TelnCC+1
+	sta	TelWotStr+2
+	ldw	R0,#TelWotStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelWotStr:	.byte	255,252,0,0
+
+TelWi_Echo:
+TelDo_Echo:	ldb	flgEcho,#0
+	jmp	TelnOut
 
 MainLp:	mvb	rrate,A5L
 	mvb	txtXY+2,R1H
@@ -409,7 +526,8 @@ txtLeft:	.word	0
 txtRight:	.word	319
 txtBEnd:	.byte	199
 txtREnd:	.word	312
-telnState:	.byte	0
+telnStPt:	.byte	0	; combines with state as ptr
+telnState:	.byte	0	; combines with above as ptr
 
 .ramsect
 rrate:	.block	1
