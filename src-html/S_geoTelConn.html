@@ -27,21 +27,24 @@ QConnect:	jsr	GotoFirstMenu
 	beq	30$
 	lda	NewHost
 	beq	30$
-	mvb	baseColor,curColor
-	ldw	R0,#QConnCmd
-	jsr	ComPutS
-	ldw	R0,#QConnCmd
-	jsr	PutChars
-	ldw	R0,#NewHost
-	jsr	ComPutS
-	ldw	R0,#NewHost
-	jsr	PutChars
-	ldw	R0,#QConnRcm
-	jsr	ComPutS
-	ldw	R0,#QConnRcm
-	jsr	PutChars
+	jsr	QDoConn
 30$:	jsr	keySetup
 	jmp	ResColorScn
+
+QDoConn:	mvb	baseColor,curColor
+	ldw	R0,#QConnCmd
+	jsr	ComPutS
+	ldw	R0,#QConnCmd
+	jsr	PutChars
+	ldw	R0,#NewHost
+	jsr	ComPutS
+	ldw	R0,#NewHost
+	jsr	PutChars
+	ldw	R0,#QConnRcm
+	jsr	ComPutS
+	ldw	R0,#QConnRcm
+	jsr	PutChars
+	rts
 	
 QConnCmd:	.byte	13,"atdt",34,0
 QConnRcm:	.byte 34,13,0
@@ -81,6 +84,8 @@ QConnPhb:	jsr	GotoFirstMenu
 	beq	30$
 	cmp	#$15
 	beq	40$
+	cmp	#$05
+	beq	50$
 20$:	jsr	CloseRecordFile
 	jsr	keySetup
 	jmp	ResColorScn
@@ -88,10 +93,10 @@ QConnPhb:	jsr	GotoFirstMenu
 	bra	10$
 40$:	jsr	OldPhb
 	bra	10$
+50$:	jmp	OpenPhNm
 
 QPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.byte	$1f,$a9,$36,$00,$08,$01	; dialog box dimensions
-	.byte	$05,$14,$19	; OPEN button
 	.byte	$02,$14,$74	; CANCEL button
 	.byte	$0b,$0b,$0c	; static text
 	.word PhbTxt00
@@ -103,6 +108,8 @@ QPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.word PhbI02
 	.byte	$12,$05,$74	; user clickbox
 	.word PhbI03
+	.byte	$12,$14,$19	; user clickbox
+	.word PhbI04
 	.byte	$13	; all external dialog gfx
 	.word PhbGfx
 	.byte	$11	; otherPressVec
@@ -187,24 +194,105 @@ PhbI02:	.word PhbImg02	; pointer to graphics data
 	.word $ffff
 	.byte	$06,$10	; pic width and height
 	.word PhbR02
-PhbR02:	lda	#$16	; sysDBData code
-	sta	sysDBData
-	jmp	RstrFrmDialogue	; RstrFrmDialogue
+PhbR02:	lda	PhSelRef+1	; check PREV selection
+	beq	10$	; NO prev selection. 
+	jsr	DelPhNm
+10$:	rts
 PhbI03:	.word PhbImg03	; pointer to graphics data
 	.word $ffff
 	.byte	$0b,$10	; pic width and height
-	.word PhbR03
-PhbR03:	lda	#$17	; sysDBData code
+	.word MovePhPg
+PhbI04:	.word PhbImg04	; pointer to graphics data
+	.word $ffff
+	.byte	$06,$10	; pic width and height
+	.word PhbR04
+PhbR04:	lda	PhSelRef+1	; check PREV selection
+	beq	10$	; NO prev selection. 
+	lda	#$05	; sysDBData code
 	sta	sysDBData
 	jmp	RstrFrmDialogue	; RstrFrmDialogue
+10$:	rts
 
 
 PhbImg00:
 <img src="00064.png" />PhbImg01:
 <img src="00065.png" />PhbImg02:
 <img src="00066.png" />PhbImg03:
-<img src="00067.png" />
+<img src="00067.png" />PhbImg04:
+<img src="00068.png" />
+
 ; thats all the bitmaps!
+
+MovePhPg:	;.byte	$05,$74	; col,row
+	;.byte	$0b,$10	; pic width and height
+	ldb	R2L,#$74
+	ldb	R2H,#$84
+	ldw	R3,#($05 * $08)
+	mvw	R3,R4
+	avw	#22,R4
+	jsr	IsMseInRegion	; did we click HERE
+	cmp	#$00
+	beq	10$	; no, so check next box
+	jmp	MovePhBot
+10$:	mvw	R4,R3
+	avw	#22,R4
+	jsr	IsMseInRegion
+	cmp	#$00
+	beq	20$
+	jmp	MovePhTop
+20$:	mvw	R4,R3
+	avw	#22,R4
+	jsr	IsMseInRegion
+	cmp	#$00
+	beq	30$
+	jmp	MovePhUp
+30$:	mvw	R4,R3
+	avw	#22,R4
+	jsr	IsMseInRegion
+	cmp	#$00
+	beq	40$
+	jmp	MovePhDn
+40$:	rts
+
+
+
+MovePhUp:	cwi	PhPagesDex,#PhPages
+	bne	10$
+	rts
+10$:	mvw	PhPagesDex, A0
+	ldy	#0
+	lda	(A0),y
+	sta	PhPages
+	iny
+	lda	(A0),y
+	sta	PhPages+1
+	svw	#2,PhPagesDex
+	jmp	FillPhPg
+
+MovePhDn:	lda	PhLastFl
+	beq	10$
+	rts
+10$:	avw	#2,PhPagesDex
+	mvw	PhPagesDex,A0
+	ldy	#0
+	lda	PhPages
+	sta	(A0),y
+	iny
+	lda	PhPages+1
+	sta	(A0),y
+	jmp	FillPhPg
+
+MovePhTop:	cwi	PhPagesDex,#PhPages
+	bne	10$
+	rts
+10$:	ldw	PhPage,#0
+	jmp	FillPhPg
+
+MovePhBot:	lda	PhLastFl
+	beq	10$
+	rts
+10$:	jsr	MovePhDn
+	jmp	MovePhBot
 
 NewPhb:	jsr	ClrNamHost
 	ldw	R0,#NPhbDat
@@ -241,28 +329,17 @@ NPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.byte	$01,$03,$2c	; OK button
 	.byte	$02,$14,$2c	; CANCEL button
 	.byte	$0d,$0f,$1b	; input text
-	.byte	$70,$50	; buffer vec, max bytes
+	.byte	$70,$1d	; buffer vec, max bytes
 	.byte	$13	; all external dialog gfx
 	.word QCDlgGfx
 	.byte	$00	; end of table
 NPhbTxt00:	.byte	$18,"Enter a name for this connection",27,0
 
 
-OldPhb:	jsr	ClrNamHost
-	mvw	PhSelRef,A0
-	ldy	#0
-	lda	(A0),y
-	jsr	PointRecord
-	cpx	#0
-	bne	10$
-	cpy	#0	; y=0 means ok, but no data
-	bne	20$
-	; reset page maybe? *
-10$:	rts
-20$:	ldw	A1,#PhPgBlk
-	jsr	LoadPhPg
-	bne	10$
-	ldy	#1
+OldPhb:	jsr	LdSelPhb
+	beq	10$
+	rts
+10$:	ldy	#1
 	lda	(A0),y
 	tay
 	ldx	#0
@@ -296,6 +373,45 @@ OldPhb:	jsr	ClrNamHost
 	beq	90$
 	lda	NewHost
 	beq	90$
+	jsr	SetSelPhR
+	jsr	MkOldHost
+	rts
+90$:	rts		; * do something special?
+
+
+DelPhNm:	jsr	LdSelPhb
+	beq	10$
+	rts
+10$:	jsr	SetSelPhR
+	ldy	#83
+	lda	#0
+11$:	sta	(R0),y
+	dey
+	bpl	11$
+	jsr	WrCurPhBlk
+	ldw	PhPage,#0
+	jmp	FillPhPg
+	rts
+
+LdSelPhb:	jsr	ClrNamHost
+	mvw	PhSelRef,A0
+	ldy	#0
+	lda	(A0),y
+	jsr	PointRecord
+	cpx	#0
+	bne	10$
+	cpy	#0	; y=0 means ok, but no data
+	bne	20$
+	; reset page maybe? *
+10$:	ldx	#1
+	rts
+20$:	ldw	A1,#PhPgBlk
+	jsr	LoadPhPg
+	bne	10$
+	ldx	#0
+	rts
+
+SetSelPhR:	mvw	PhSelRef,A0
 	ldw	R0,#PhPgBlk
 	ldy	#1
 	lda	(A0),y
@@ -304,9 +420,29 @@ OldPhb:	jsr	ClrNamHost
 	lda	#$00
 	adc	R0H
 	sta	R0H
-	jsr	MkOldHost
 	rts
-90$:	rts		; * do something special?
+
+OpenPhNm:	jsr	LdSelPhb
+	beq	10$
+	rts
+10$:	jsr	SetSelPhR
+	ldy	#0
+15$:	lda	(R0),y	; skip the name
+	beq	20$
+	iny
+	bne	15$
+20$:	iny		; skip the Zero
+	ldx	#0
+25$:	lda	(R0),y
+	sta	NewHost,x
+	beq	30$
+	inx
+	iny
+	bne	25$
+30$:	jsr	CloseRecordFile
+	jsr	QDoConn
+	jsr	keySetup
+	jmp	ResColorScn
 
 
 MkNewHost:
@@ -333,11 +469,11 @@ MkOldHost:	ldw	R1,#NewName
 	ldw	R1,#NewHost
 23$:	lda	(R1),y
 	sta	(R0),y
-	beq	25$
+	beq	WrCurPhBlk
 	inw	R0
 	inw	R1
 	bra	23$
-25$:	ldw	R2,#$00fe
+WrCurPhBlk:	ldw	R2,#$00fe
 	ldw	R7,#PhPgBlk
 	jsr	WriteRecord
 	cpx	#0
@@ -365,6 +501,7 @@ MkNewHBlk:
 	rts
 
 FillPhPg:	lda	#0
+	sta	PhLastFl
 	jsr	SetPattern
 	jsr	i_Rectangle
 PhPgDims:	.byte	$31,$90
@@ -388,15 +525,19 @@ PhPgDims:	.byte	$31,$90
 20$:	mvb	R1H,R10H
 	jsr	NextPhNm	; get phone number
 	lda	R0H
-	beq	30$	; flag as err or eof
+	bne	25$	; flag as err or eof
+	ldb	PhLastFl,#1
+	bra	30$
+25$:	mvb	R10H,R1H	; now display it!
 	ldy	#0
+	lda	(R0),y
+	beq	20$
 	lda	PhPage	; got good R0
 	sta	(A9),y	; so safe page ref to list
 	inw	A9
 	lda	PhPage+1
 	sta	(A9),y
 	inw	A9
-	mvb	R10H,R1H	; now display it!
 	ldw	R11,#$003f
 	jsr	PutString
 	avb	#$09,R1H
@@ -428,6 +569,8 @@ NextPhNm:	ldw	R0,#0
 	rts
 
 FirstPhNm:	ldw	PhPage,#0
+	ldw	PhPagesDx,#PhPages
+	ldw	PhPages,#0
 NextPhBlk:	ldw	R0,#0
 	inc	PhPage
 	lda	PhPage
@@ -448,6 +591,8 @@ NextPhBlk:	ldw	R0,#0
 	jsr	PhMkR0
 	ldx	#0
 	rts
+
+
 
 LoadPhPg:	ldw	R2,#$00fe
 	ldw	R7,#PhPgBlk
@@ -483,11 +628,11 @@ WinSave:	.block 6
 PhPage:	.block 2
 PhPgTnS:	.block 2
 PhPgBlk:	.block 256
-PhPageSt:	.block 2
 PhSelRef:	.block 2
 PhSelDims:	.block 6
-PhPgRefs:	.block 2*16 ; just a guess
-
-
+PhPgRefs:	.block 2*16	 ; just a guess, it's really 10
+PhPagesDx:	.block 2
+PhPages:	.block 80	; (128 * 3 / 10) * 2
+PhLastFl:	.block 1
 
 </pre></body></html>
