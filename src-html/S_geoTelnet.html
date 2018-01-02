@@ -643,10 +643,8 @@ MainLp2:	jsr	ComGet
 	rts
 20$:	tax
 	ldb	A9L,#0
-	lda	$01
-	pha
-	lda	#$30
-	sta	$01
+	phb	BANK_REG
+	ldb	BANK_REG,#BANK_vSTD
 	txa
 	.byte	$a2	; ldx immediate
 BufferFlg:	.byte 0
@@ -655,8 +653,7 @@ BufferFlg:	.byte 0
 	jsr	PutRByte
 	pla
 25$:	jsr	DrawChar
-	pla
-	sta	$01
+	plb	BANK_REG
 	dec	A5L
 	beq	30$
 	jmp	MainLp2

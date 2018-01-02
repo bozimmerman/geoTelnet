@@ -128,13 +128,13 @@ AnsiBhtt:	jsr	AnsiBroke
 	rts
 
 	.byte	0	; AnsiChtt-1 - temp .a sav
-AnsiChtt:	.byte	"mHfABCDsuJKhlpEFGdLMP",0
+AnsiChtt:	.byte	"mHfABCDsuJKhlpEFGdLMPn",0
 AnsiDhtt:	.word	Ansi_m_, Ansi_H, Ansi_f_, Ansi_A
 	.word	Ansi_B, Ansi_C, Ansi_D, Ansi_s_
 	.word	Ansi_u_, Ansi_J, Ansi_K, Ansi_h_
 	.word	Ansi_l_, Ansi_p_, Ansi_E, Ansi_F
 	.word	Ansi_G, Ansi_d_, Ansi_L, Ansi_M
-	.word	Ansi_P
+	.word	Ansi_P, Ansi_n_
 
 Ansi_m_:	lda	ansiNBuf
 	bne	10$	
@@ -318,6 +318,21 @@ Ansi_u_:	mvw	AnsiASv,txtXY	; Restore Position
 	mvw	AnsiCSv2,colorPtr
 	jmp	AnsiOut
 
+Ansi_n_:	lda	ansiNBuf	; Status Report
+	bne	20$
+10$:	jmp	AnsiOut
+20$:	ldy	ansiNBuf+1
+	cpy	#5
+	bne	30$
+	ldw	R0,TXTansN1
+	jsr	QOutStr
+30$:	cpy	#6
+	bne	10$
+	ldw	R0,TXTansN2
+	jsr	QOutStr
+	jmp	AnsiOut
+TXTansN1:	.byte	27,91,48,110,0
+TXTansN2:	.byte	27,91,50,51,59,49,82,0
 
 Ansi_J:	lda	ansiNBuf
 	beq	10$

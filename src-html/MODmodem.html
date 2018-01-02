@@ -1,4 +1,11 @@
 <!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+;BANK_REG = $ff00
+;BANK_vIO = $7e
+;BANK_vSTD = $7e
+BANK_REG = $01
+BANK_vIO = $35
+BANK_vSTD = $30
+
 .noeqin
 .include	GEOSequates
 .glbl
@@ -60,20 +67,21 @@ ComInit:	jsr CLL2xxRb
 	jsr CLL2BSet
 	mvb A3H,CLL2FloC
  	sei
-	phb $01
-	ldb $01,#$35
-	lda CLRetNMI+2
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
+	lda CLL2NMIv+2
+	bne 20$
+	jsr Check128
 	bne 10$
-	lda $fffa
-	sta CLRetNMI+1
+	jsr CLL2Bnkr
+10$:	lda $fffa
+	sta CLL2NMIv+1
 	lda $fffb
-	sta CLRetNMI+2
-10$:	lda #<CLL2NMI1
+	sta CLL2NMIv+2
+20$:	lda #<CLL2NMI1
 	sta $fffa
-	sta $0318
 	lda #>CLL2NMI1
 	sta $fffb
-	sta $0319
 	ldy #$03
 50$:	lda CLL2WTime,y
 	sta $dd04,y
@@ -96,7 +104,7 @@ ComInit:	jsr CLL2xxRb
 	ora #$02
 	sta $dd03
 	sta $dd01 ; set everything high thats writeable
-	plb $01
+	plb BANK_REG
 	cli 
 	rts 
 
@@ -106,20 +114,18 @@ ComInit:	jsr CLL2xxRb
 ;*
 ;************************
 ComUninst: 	sei 
-	phb $01
-	ldb $01,#$35
-	lda CLRetNMI+1
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
+	lda CLL2NMIv+1
 	sta $fffa
-	sta $0318
-	lda CLRetNMI+2
+	lda CLL2NMIv+2
 	sta $fffb
-	sta $0319
 	lda #$7f
 	sta $dd0d
 	lda $dd00
 	ora #$04
 	sta $dd00
-	plb $01
+	plb BANK_REG
 	cli
 	clc 
 	rts 	
@@ -138,15 +144,13 @@ CLL2xxRb:	lda #0
 ;********************************
 
 ComReInit:	sei 
-	phb $01
-	ldb $01,#$35
-	lda CLRetNMI+1
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
+	lda CLL2NMIv+1
 	sta $fffa
-	sta $0318
-	lda CLRetNMI+2
+	lda CLL2NMIv+2
 	sta $fffb
-	sta $0319
-	plb $01
+	plb BANK_REG
 	cli
 	mvb	CLL2Baud,A3L
 	mvb	CLL2FloC,A3H
@@ -162,11 +166,11 @@ ComReInit:	sei
 ComDisable:	jsr ComFloff
 20$:	lda CLL2Busy
 	bmi 20$
-30$:	phb $01
-	ldb $01,#$35
+30$:	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda #$7f
 	sta $dd0d
-	plb $01
+	plb BANK_REG
 	lda #$80
 	sta CLL2Busy
 	clc 
@@ -179,8 +183,8 @@ ComDisable:	jsr ComFloff
 ;* Inputs:
 ;*
 ;**********************************
-ComEnable:	phb $01
-	ldb $01,#$35
+ComEnable:	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda CLL2WTime+2
 	sta $dd06
 	lda CLL2WTime
@@ -191,7 +195,7 @@ ComEnable:	phb $01
 	sta CLL2Busy
 	lda #$90
 	sta $dd0d
-	plb $01
+	plb BANK_REG
 	jsr ComFlon
 	clc 
 	rts 
@@ -203,8 +207,8 @@ ComEnable:	phb $01
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	phb $01
-	ldb $01,#$35
+ComOnline:	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda	$dd01
 	and	#$10
 	sta	ComOFlg+1
@@ -225,8 +229,8 @@ CLL2SndL:	lda CLL2Busy
 	sei 
 	pla 
 	sta CLL2WTmp
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda #$81
 	sta $dd0d
 	lda #$11
@@ -241,14 +245,14 @@ CLL2SndL:	lda CLL2Busy
 	bcc 10$
 	lda CLL2Space
 10$:	sta CLL2NxtO
-	plb $01
+	plb BANK_REG
 	plp 
 	rts 
 
 CLL2NMI1:	sei 
 CLL2NMI2:	pha
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda $dd0d
 	bpl 40$
 	and #$03
@@ -265,12 +269,12 @@ CLL2NMI2:	pha
 	bcs 10$
 	lda CLL2Mark
 10$:	sta CLL2NxtO
-	plb $01
+	plb BANK_REG
 	pla 
 	rti
 20$:	lda CLL2Space
 	sta $dd00
-	plb $01
+	plb BANK_REG
 	pla 
 	rti
 30$:	lda #$10
@@ -278,8 +282,8 @@ CLL2NMI2:	pha
 	lda #$01
 	sta $dd0d
 	sta CLL2Busy
-	jmp CLNMIXit
-40$:	jmp CLNMIXit
+	jmp CLL2NMxt
+40$:	jmp CLL2NMxt
 50$:	lda #$11
 	sta $dd0f
 	lda #$10
@@ -288,13 +292,13 @@ CLL2NMI2:	pha
 	sta $dd0d
 	lda #$08
 	sta CLL2RBit
-	jmp CLNMIXit
+	jmp CLL2NMxt
 55$:	lda $dd01
 	lsr a
 	ror CLL2RTmp
 	dec CLL2RBit
 	beq CLL2NMI_
-	jmp CLNMIXit
+	jmp CLL2NMxt
 
 
 CLL2NMI_:	lda #$02
@@ -322,10 +326,10 @@ CLL2NMI_:	lda #$02
 	;jsr ComSend	; obviously a bad idea.
 20$:	lda #$90
 	sta $dd0d
-CLNMIXit:	plb $01
+CLL2NMxt:	plb BANK_REG
 	pla 
 	rti
-CLRetNMI:	jmp $0000	;$fe56
+CLL2NMIv:	jmp $0000	;$fe56
 
 
 ;*****************************
@@ -335,14 +339,14 @@ CLRetNMI:	jmp $0000	;$fe56
 ;******************************
 ComSPut:	php 
 	pha
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 10$:	lda $d012
 	cmp #$f2
 	bcs 20$
 	cmp #$2c
 	bcs 10$
-20$:	plb $01
+20$:	plb BANK_REG
 	jmp CLL2SndL
 
 
@@ -364,8 +368,8 @@ CLL2BSet:	sta CLL2Baud
 	jsr IsNTSC
 	beq 19$
 	ldw A0,#CLL2PBVals		
-19$:	phb $01
-	ldb $01,#$35
+19$:	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	ldx #$00
 20$:	lda (A0),y
 	sta CLL2WTime,x
@@ -374,7 +378,7 @@ CLL2BSet:	sta CLL2Baud
 	inx 
 	cpx #$04
 	bne 20$
-	plb $01
+	plb BANK_REG
 	rts 
 
 ;*****************************
@@ -387,8 +391,8 @@ IsNTSC:	lda #$00
 	cmp #$01
 	rts
 10$:	sei
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda $d011
 	pha
 	mvw $fffa,CLL2nmsv
@@ -412,10 +416,17 @@ IsNTSC:	lda #$00
 50$:	pla
 	sta $d011
 	mvw CLL2nmsv,$fffa
-	plb $01
+	plb BANK_REG
 	cli
 	jmp IsNTSC
 CLL2rti:	rti
+
+Check128:	lda #$12
+	cmp $c00f
+	bpl 10$
+	lda $c013
+10$:	cmp #$80
+	rts
 
 ;*****************************
 ;* ComGet	Read RS-232 Byte
@@ -454,12 +465,12 @@ ComGet:	lda CLL2BfRdx
 ComFlon:	pha
 	bit CLL2FloC
 	bpl 10$
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda $dd01
 	ora #$02
 	sta $dd01
-	plb $01
+	plb BANK_REG
 	bit CLL2FloC
 10$:	bvc 20$
 	lda #$11
@@ -476,12 +487,12 @@ ComFlon:	pha
 ComFloff:	pha
 	bit CLL2FloC
 	bpl 10$
-	phb $01
-	ldb $01,#$35
+	phb BANK_REG
+	ldb BANK_REG, #BANK_vIO
 	lda $dd01
 	and #$fd
 	sta $dd01
-	plb $01
+	plb BANK_REG
 	bit CLL2FloC
 10$:	bvc 30$
 	lda #$13
@@ -489,6 +500,15 @@ ComFloff:	pha
 30$:	pla
 	rts
 
+
+;**** c128 only -- copy NMI routine to bank 1, called from ram bank 0
+CLL2Bnkr:	ldw R0,#CLL2NMI1
+	ldw R1,#CLL2NMI1
+	ldw R2,#(CLL2NMIv + CLL2NMI1 + 10)
+	ldb R3L,#$01
+	ldb R3H,#$00
+	jsr $c2e3	; MoveBData
+	rts
 
 CLL2Busy:	.byte $01 ; busy flag
 CLL2BfRdx:	.byte $00
