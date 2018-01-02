@@ -74,16 +74,20 @@ QConnPhb:	jsr	GotoFirstMenu
 	cpx	#0
 	bne	20$
 	ldw	PhPage,#0
-	ldw	R0,#QPhbDat
+15$:	ldw	R0,#QPhbDat
 	jsr	DoDlgBox	; call DoDlgBox and leave!
 	lda	sysDBData
 	cmp	#$14
-	bne	20$
-	jsr	NewPhb
-	bra	10$
+	beq	30$
+	cmp	#$15
+	beq	40$
 20$:	jsr	CloseRecordFile
 	jsr	keySetup
 	jmp	ResColorScn
+30$:	jsr	NewPhb
+	bra	10$
+40$:	jsr	OldPhb
+	bra	10$
 
 QPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.byte	$1f,$a9,$36,$00,$08,$01	; dialog box dimensions
@@ -101,6 +105,8 @@ QPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.word PhbI03
 	.byte	$13	; all external dialog gfx
 	.word PhbGfx
+	.byte	$11	; otherPressVec
+	.word PhClick
 	.byte	$00	; end of table
 PhbTxt00:	.byte	$18,"Telnet Server Phonebook",27,0
 PhbGfx:	jsr	$c1a8	; i_GraphicsString
@@ -113,6 +119,53 @@ PhbGfx:	jsr	$c1a8	; i_GraphicsString
 	rts
 
 
+
+PhClick:	lda	mouseData
+	beq	10$
+	rts
+10$:	mvb PhPgDims,PhClickA+1
+	ldw	A9,#PhPgRefs-2
+PhClickA:	lda	#$31
+	cmp PhPgDims+1
+	bcc	10$
+	rts
+10$:	sta	R2L
+	sta	R2H
+	avb	#$09,R2H	; fix bottom
+	mvb	R2H,PhClickA+1	; bottom is next top
+	inw	A9	; setup vlir ref ptr
+	inw	A9
+	ldy	#0	; are we pointing nowhere?
+	lda	(A9),y
+	beq	19$
+	mvw	PhPgDims+2,R3
+	mvw	PhPgDims+4,R4
+	jsr	IsMseInRegion	; did we click HERE
+	cmp	#$00
+	beq	PhClickA	; no, so check next box
+	jsr	InvertRectangle	; invert where we clicked!
+	cpw	A9,PhSelRef	; was this clicked before?
+	bne	20$
+	ldw	PhSelRef,#0	; yes, so clear selection
+19$:	rts		; exit here
+20$:	ldy	#5
+25$:	lda	R2,y
+	sta	APITemp1,y
+	lda	PhSelDims,y
+	sta	R2,y
+	dey
+	bpl	25$
+	lda	PhSelRef+1	; check PREV selection
+	beq	29$	; NO prev selection. 
+	jsr	InvertRectangle
+29$:	ldy	#5
+30$:	lda	APITemp1,y
+	sta	PhSelDims,y
+	dey
+	bpl	30$
+40$:	mvw	A9,PhSelRef
+	rts
+
 PhbI00:	.word PhbImg00	; pointer to graphics data
 	.word $ffff
 	.byte	$06,$10	; pic width and height
@@ -124,7 +177,10 @@ PhbI01:	.word PhbImg01	; pointer to graphics data
 	.word $ffff
 	.byte	$06,$10	; pic width and height
 	.word PhbR01
-PhbR01:	lda	#$15	; sysDBData code
+PhbR01:	lda	PhSelRef+1
+	bne	10$
+	rts
+10$:	lda	#$15	; sysDBData code
 	sta	sysDBData
 	jmp	RstrFrmDialogue	; RstrFrmDialogue
 PhbI02:	.word PhbImg02	; pointer to graphics data
@@ -150,13 +206,7 @@ PhbImg00:
 <img src="00067.png" />
 ; thats all the bitmaps!
 
-NewPhb:	ldw	A2,#NewName
-	ldy	#0
-	tya
-09$:	sta	(A2),y
-	iny
-	cpy	#EndOfNames-NewName+1
-	bcc	09$
+NewPhb:	jsr	ClrNamHost
 	ldw	R0,#NPhbDat
 	jsr	DoDlgBox	; call DoDlgBox and leave!
 	lda	sysDBData
@@ -175,6 +225,15 @@ NewPhb:	ldw	A2,#NewName
 	jsr	MkNewHost
 30$:	rts
 
+ClrNamHost:	ldw	A2,#NewName
+	ldy	#0
+	tya
+09$:	sta	(A2),y
+	iny
+	cpy	#EndOfNames-NewName+1
+	bcc	09$
+	rts
+
 NPhbDat:	.byte	$01	; size flag, and shadow pattern
 	.byte	$1f,$64,$36,$00,$14,$01	; dialog box dimensions
 	.byte	$0b,$1c,$0f	; static text
@@ -189,19 +248,80 @@ NPhbDat:	.byte	$01	; size flag, and shadow pattern
 NPhbTxt00:	.byte	$18,"Enter a name for this connection",27,0
 
 
+OldPhb:	jsr	ClrNamHost
+	mvw	PhSelRef,A0
+	ldy	#0
+	lda	(A0),y
+	jsr	PointRecord
+	cpx	#0
+	bne	10$
+	cpy	#0	; y=0 means ok, but no data
+	bne	20$
+	; reset page maybe? *
+10$:	rts
+20$:	ldw	A1,#PhPgBlk
+	jsr	LoadPhPg
+	bne	10$
+	ldy	#1
+	lda	(A0),y
+	tay
+	ldx	#0
+30$:	lda	(A1),y
+	sta	NewName,x
+	beq	35$
+	inx
+	iny
+	bne	30$
+35$:	iny
+	ldx	#0
+40$:	lda	(A1),y
+	sta	NewHost,x
+	beq	45$
+	inx
+	iny
+	bne	40$
+45$:	ldw	A2,#NewName
+	ldw	R0,#NPhbDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$02
+	beq	90$
+	lda	NewName
+	beq	90$
+	ldw	A2,#NewHost
+	ldw	R0,#QConnDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$02
+	beq	90$
+	lda	NewHost
+	beq	90$
+	ldw	R0,#PhPgBlk
+	ldy	#1
+	lda	(A0),y
+	add	R0L
+	sta	R0L
+	lda	#$00
+	adc	R0H
+	sta	R0H
+	jsr	MkOldHost
+	rts
+90$:	rts		; * do something special?
+
+
 MkNewHost:
 	jsr	FirstPhNm
 10$:	lda	R0H
 	bne	15$
 	jsr	MkNewHBlk
-	beq	20$
+	beq	MkOldHost
 	rts
 15$:	ldy	#0
 	lda	(R0),y
-	beq	20$
+	beq	MkOldHost
 	jsr	NextPhNm
 	bra	10$
-20$:	ldw	R1,#NewName
+MkOldHost:	ldw	R1,#NewName
 	ldy	#0
 21$:	lda	(R1),y
 	sta	(R0),y
@@ -249,6 +369,7 @@ FillPhPg:	lda	#0
 	jsr	i_Rectangle
 PhPgDims:	.byte	$31,$90
 	.word $003e,$00c9
+	ldw	PhSelRef,#0	; clear selection ptr
 	ldy	#5
 10$:	lda	windowTop,y
 	sta	WinSave,y
@@ -256,14 +377,26 @@ PhPgDims:	.byte	$31,$90
 	sta	windowTop,y
 	dey
 	bpl	10$
-	
+	ldy	#2*16
+15$:	lda	#0
+	sta	PhPgRefs,y
+	dey
+	bpl	15$	
 	mvb	PhPgDims,R1H
 	avb	#$07,R1H
+	ldw	A9,#PhPgRefs
 20$:	mvb	R1H,R10H
 	jsr	NextPhNm	; get phone number
 	lda	R0H
 	beq	30$	; flag as err or eof
-	mvb	R10H,R1H
+	ldy	#0
+	lda	PhPage	; got good R0
+	sta	(A9),y	; so safe page ref to list
+	inw	A9
+	lda	PhPage+1
+	sta	(A9),y
+	inw	A9
+	mvb	R10H,R1H	; now display it!
 	ldw	R11,#$003f
 	jsr	PutString
 	avb	#$09,R1H
@@ -308,22 +441,29 @@ NextPhBlk:	ldw	R0,#0
 09$:	dec	PhPage
 	ldx	#1
 	rts
-10$:	ldw	R2,#$00fe
-	ldw	R7,#PhPgBlk
-	jsr	ReadRecord
-	cpx	#11	; buffer overflow is OK!
-	beq	NextPhBlk
-	cpx	#0
-	bne	NextPhBlk
-	cbi	PhPgBlk,#$50	; 'P'
-	bne	NextPhBlk
-	cbi	PhPgBlk+1,#$48	; 'H'
+10$:	jsr	LoadPhPg
 	bne	NextPhBlk
 	mvb	curRecord,PhPage
 	ldb	PhPage+1,#2
 	jsr	PhMkR0
 	ldx	#0
 	rts
+
+LoadPhPg:	ldw	R2,#$00fe
+	ldw	R7,#PhPgBlk
+	jsr	ReadRecord
+	cpx	#11	; buffer overflow is OK!
+	beq	10$
+	cpx	#0
+	bne	10$
+	cbi	PhPgBlk,#$50	; 'P'
+	bne	10$
+	cbi	PhPgBlk+1,#$48	; 'H'
+	bne	10$
+	rts
+10$:	ldx	#1
+	rts
+
 
 PhMkR0:	ldw	R0,#PhPgBlk
 	lda	R0L
@@ -343,6 +483,10 @@ WinSave:	.block 6
 PhPage:	.block 2
 PhPgTnS:	.block 2
 PhPgBlk:	.block 256
+PhPageSt:	.block 2
+PhSelRef:	.block 2
+PhSelDims:	.block 6
+PhPgRefs:	.block 2*16 ; just a guess
 
 
 
