@@ -321,7 +321,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	XBytesDone,#0
 	ldb	XErrors,#0
 	ldw	A2,#XFilename
-	ldb	A3L,#PRG
+	ldb	A3L,#2
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
@@ -336,7 +336,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jsr	XMOrcvCrc
 	cpx	#0
 	bne	15$
-	ldb	A2L,#PRG	; ***TODO
+	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
@@ -344,7 +344,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jsr	OKBox
 	bra	20$
 15$:	jsr	XDnFlush
-	ldb	A2L,#PRG	; ***TODO
+	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
