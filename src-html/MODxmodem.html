@@ -40,7 +40,8 @@ XMO_OTH	= $02
 ;* Inputs:
 ;*	A2	Vector - Receive a single byte in .a
 ;*	A3	Vector - Received a good block
-;*	A3	Vector - Received a bad block
+;*	A4	Vector - Received a bad block
+;*	A5	Vector - Abort check (carry set = abort)
 ;* Outputs:
 ;*	.x 	0 means A-OK, or abort/error
 ;*
@@ -53,6 +54,7 @@ XMOrcvCrc:	ldb	XMOXType,#1
 XMOrcvSt:	mvw	A2,XMORcVec+1	; receive 1 byte in .a
 	mvw	A3,XMORgVec+1	; receive good block
 	mvw	A4,XMOErVec+1	; receive error block
+	mvw	A5,XMOabVec+1	; abort check
 	ldb	XMOUpDn,#1
 	jsr	XMOClear
 	jsr	XMOBufFlush
@@ -198,6 +200,7 @@ XMOExit:	ldx	XMOAbort
 ;*	A2	Vector - Ensure 128 bytes available
 ;*	A3	Vector - Send a single byte in .a, .x=no more
 ;*	A4	Vector - Sent a bad block
+;*	A5	Vector - Abort Check (carry set = abort)
 ;* Outputs:
 ;*	.x 	0 means A-OK, or abort/error
 ;*
@@ -210,10 +213,12 @@ XMOsend:	ldb	XMOUpDn,#0
 	mvw	A2,XMOSsVec+1
 	mvw	A3,XMOSnVec+1
 	mvw	A4,XMOErVec+1
+	mvw	A5,XMOabVec+1
 	jmp	XMOsendStart
 
 XMOSsVec:	jmp	XMONada	; prepare 128 bytes
 XMOSnVec:	jmp	XMONada	; send 1 byte
+XMOabVec:	jmp	XMONada
 
 XMOgosChk:	ldb	XMOXType,#$00
 	ldb	XMOBufSize,#$84
@@ -232,14 +237,13 @@ XMObuild:	jsr	XMOSsVec
 	ldy	XMOBufCt
 	sta	XMOBuf3,y
 	stx	XMOIOStat
+	inc	XMOBufCt
 	cpx	#0
 	bne	20$
-	inc	XMOBufCt
 	cbi	XMOBufCt,#$80
 	bcc	10$
 	bra	30$
-20$:	inc	XMOBufCt
-	inc	XMOBufCt
+20$:	nop		; BZ: why? inc 	XMOBufCt
 25$:	ldy	XMOBufCt
 	lda	#XMO_PAD
 	sta	XMOBuf3,y
@@ -368,7 +372,9 @@ XMOBadTm:	inc	XMOTmOuts
 
 
 
-XMOChkAbort:	; TODO: * Is C= key held down?
+XMOChkAbort:	clc
+	jsr	XMOabVec
+	bcs	10$
 	jsr	ComOnline
 	beq	10$
 	lda	#0

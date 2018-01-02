@@ -7,11 +7,14 @@
 .glbl
 .endif
 
+curWidth = $8807
 
 .psect
 StartPrg:	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
+	ldb	flgANSI,#1
+	jsr	FixATerm
 	jsr	mdmSetup	; *
 	jsr	FixBaud
 	jsr	keySetup
@@ -23,7 +26,17 @@ CleanExit:	jsr	PromptOff
 	jsr	SavColorScn	; restores origColor
 	jmp	EnterDeskTop
 
-scnSetup:	mvb	COLOR_MATRIX,origColor
+scnSetup:	ldb	txtTop,#$10	; screen def
+	ldb	txtBot,#199
+	ldw	txtLeft,#$00
+	ldw	txtRight,#319
+	mvw	txtRight,txtREnd	; last chars
+	sbw	curWidth,txtREnd
+	inw	txtREnd	
+	mvb	txtBot,txtBEnd	; bot row
+	inc	txtBEnd
+	sbb	curHeight,txtBEnd
+	mvb	COLOR_MATRIX,origColor
 	lda	#0
 	jsr	ClrTrmScn
 	jsr	UseSystemFont	; * for now
@@ -35,19 +48,17 @@ scnSetup:	mvb	COLOR_MATRIX,origColor
 	ldb	dispBufferOn,#ST_WR_FORE
 	jsr	DrawMenu
 scnReset:	jsr	FixFont80
-	ldw	txtXY,#$0
-	ldb	txtXY+2,#$10
 	mvb	baseColor,curColor
-	ldw	colorLPtr,#COLOR_MATRIX+(40*2)
-	mvw	colorLPtr,colorPtr
-	ldb	colorHalf,#1
+	jsr	CrsrTL	
 	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
-	ldb	windowTop,#0
-	ldb	windowBottom,#199
-	ldw	leftMargin,#0
-	ldw	rightMargin,#319
+	ldb	windowTop,#0	; necc for menu recover?
+	mvb	txtBot,windowBottom,
+	mvw	txtLeft,leftMargin
+	mvw	txtRight,rightMargin
 	rts
+
+
 
 ClrTrmScn:	pha
 	lda	#0
@@ -56,9 +67,9 @@ ClrTrmScn:	pha
 	jsr	SetPattern
 	pla
 	sta	R2L
-	ldb	R2H,#199
-	ldw	R3,#0
-	ldw	R4,#319
+	mvb	txtBot,R2H
+	mvw	txtLeft,R3
+	mvw	txtRight,R4
 	ldb	dispBufferOn,#ST_WR_FORE|ST_WR_BACK
 	jsr	Rectangle
 	ldb	dispBufferOn,#ST_WR_FORE
@@ -72,7 +83,7 @@ ClrTrmScn:	pha
 FixFont80:	ldw	R0,#GEOSFont
 	jsr	LoadCharSet
 	ldb	baselineOffset,#0
-	ldb	$8807,#$04	; $8807=realSize
+	ldb	curWidth,#$04	; curWidth=realSize
 	rts
 
 AboutStrs:	.byte	24,"      geoTelnet beta1",0
@@ -131,6 +142,7 @@ keyRestore:	sei
 
 KeyPRtn:	lda	keyData
 	beq	99$
+	;TODO: *** turn arrow keypress in ansi esc, if ansi on
 	cmp	#$1d
 	bne	10$
 	lda	#$08
@@ -143,12 +155,6 @@ KeyPRtn:	lda	keyData
 	jsr	ComSPut	; *
 	; send to modem
 	pla
-	cmp	#3	; !
-	bne	20$	; *** DELME LATER
-	jmp	CleanExit
-20$:	; ** xlate if necc
-	; ** send it to the modem
-	; ** if local echo, also screen
 99$:	rts
 
 
@@ -202,7 +208,7 @@ colorPtr:	.word COLOR_MATRIX
 	ldb	colorHalf,#1
 	inw	colorPtr
 10$:	ldb	flgDoBg,#1
-	cwi	R11,#319
+	cpw	R11,txtRight
 	bcs	PutLine
 	rts
 
@@ -210,10 +216,12 @@ colorPtr:	.word COLOR_MATRIX
 PutLine:	ldw	R11,#0
 	ldb	colorHalf,#1
 	adb	curHeight,R1H
-	cbi	R1H,#193
+	cpb	R1H,txtBot
 	bcs	10$
+	cwi	colorLPtr,#$8fc0
+	bcc	05$
 	avw	#40,colorLPtr
-	mvw	colorLPtr,colorPtr
+05$:	mvw	colorLPtr,colorPtr
 	jsr	ClrColLn
 	rts
 10$:	sbb	curHeight,R1H
@@ -235,7 +243,9 @@ PutLine:	ldw	R11,#0
 	ldb	R2L,#0
 	jsr	FillRam
 	ldb	flgDoBg,#1
-	ldb	R1H,#192	; 199-8?
+	mvb	txtBot,R1H
+	sbb	curHeight,R1H
+	inc	R1H
 	jsr	ClrColLn
 	rts
 
@@ -248,198 +258,78 @@ ClrColLn:	tya
 	iny
 	cpy	#40
 	bcc	10$
-	pla
+20$:	pla
 	tay
 	rts
 
 PutDel:	dec	colorHalf
 	beq	10$
 	ldb	colorHalf,#1
-10$:	cwi	R11,#3
+10$:	cwi	R11,#3	; todo: txtLeft
 	bcs	15$
-	ldw	R11,#319
+	mvw	txtRight,R11
 	ldb	colorHalf,#0
-	cbi	R1H,#$20
+	cbi	R1H,#$20	; todo: txtHeight?
 	bcc	15$
 	sbb	curHeight,R1H
 	svw	#40,colorLPtr
 	mvw	colorLPtr,colorPtr
 	avw	#40,colorPtr
-15$:	sbw	$8807,R11	; realSize, #$04
+15$:	sbw	curWidth,R11	; realSize, #$04
 	lda	#$20
 	jsr	PutChar
-	sbw	$8807,R11
+	sbw	curWidth,R11
 	dew	colorPtr
 	ldb	flgDoBg,#1
 	rts
 
 
-AnsiStart:	lda	#1
-	sta	ansiDex
-	ldb	ansiNBuf,#0
-	ldb	ansiNflg,#0
-	rts
-
-AnsiBroke:	sty	ansiBuf+26
-	ldy	ansiDex
-	lda	#0
-	sta	ansiBuf,y
-	mvw	R0,ansiBuf+24
-	ldw	R0,#ansiBuf
-	jsr	PutChar2
-	mvw	ansiBuf+24,R0
-AnsiOut:	ldy	ansiBuf+26
-	ldb	ansiDex,#0
-	ldb	ansiNBuf,#0
-	ldb	ansiNflg,#0
-	rts
-
-
-
-AnsiCont:	sty	ansiBuf+26
-	ldy	ansiDex
-10$:	dey
-	sta	ansiBuf,y
-	inc	ansiDex
-	cpy	#23
-	bcc	11$
-	ldy	ansiBuf+26
-	jmp	AnsiBroke
-11$:	ldy	ansiBuf+26
-	cmp	#109	; char 'm'
-	bne	30$
-	jmp	AnsiDone
-30$:	cmp	#91	; char '['
-	bne	33$
-	lda	ansiDex
-	cmp	#2
-	beq	32$
-31$:	jmp	AnsiBroke
-32$:	rts	
-33$:	cmp	#59	; char ';'
-	bne	35$
-	ldb	ansiNflg,#0
-	rts
-35$:	cmp	#48	; char '0'
-	bcc	31$
-	cmp	#58	; char ':'
-	bcs	31$
-	sec		; math is hard
-	sbc	#48
-	pha
-	lda	ansiNflg
-	bne	40$
-	pla		; first digit, just store
-	inc	ansiNBuf	; first of digit means 1 digit
-	ldy	ansiNBuf
-	sta	ansiNBuf,y
-	inc	ansiNflg
-	ldy	ansiBuf+26
-	rts
-40$:	ldy	ansiNBuf	; next digit,mul x 10
-	lda	ansiNBuf,y
-	pha
-	asl	a
-	asl	a	; mul by 8
-	asl	a
-	sta	ansiNBuf,y
-	pla
-	pha
-	clc
-	adc	ansiNBuf,y
-	sta	ansiNBuf,y
-	pla
-	adc	ansiNBuf,y
-	sta	ansiNBuf,y
-	pla		; the new digit
-	adc	ansiNBuf,y
-	sta	ansiNBuf,y
-	ldy	ansiBuf+26
-	rts
-
-AnsiDone:	lda	ansiNBuf
-	bne	10$	
-	jmp	AnsiOut
-10$:	cmp	#1	; is simple code?
-	bne	20$
-	lda	ansiNBuf+1
-	; ** do bold, etc
-	jmp	AnsiOut
-20$:	lda	ansiNBuf+1	; is it the reset code?
-	bne	30$
-	lda	ansiNBuf+2
-	bne	30$
-	mvb	baseColor,curColor	
-	ldb	currentMode,#0	; * reset achieved!
-	jmp	AnsiOut
-30$:	ldy	#1
-	sty	AnsiLp+1
-	sty	AnsiBflg
-AnsiLp:	ldy	#1
-	dey
-	cpy	ansiNBuf
+CrsrUp:	cpb	txtTop,txtXY+2	; Cursor Up
 	bcc	10$
-	jmp	AnsiOut
-10$:	inc	AnsiLp+1
-	lda	ansiNBuf+1,y
-	cmp	#1
-	bne	20$
-	ldb	AnsiBflg,#0
-	jmp	AnsiLp
-20$:	cmp	#30
-	bcs	31$
-	jmp	AnsiLp
-31$:	cmp	#38
-	bcs	40$
-	jmp	AnsiChCol	; * its a char color!
-40$:	cmp	#40
-	bcs	42$
-41$:	jmp	AnsiLp
-42$:	cmp	#50
-	bcs	41$
-	jmp	AnsiBgCol	; * its a bg color
+	rts
+10$:	svw	#40,colorLPtr
+	svw	#40,colorPtr
+	sbb	curHeight,txtXY+2
+	rts
 
+CrsrDn:	cpb	txtXY+2,txtBEnd	; Cursor Down
+	bcc	10$
+	rts
+10$:	avw	#40,colorLPtr
+	avw	#40,colorPtr
+	adb	curHeight,txtXY+2
+	rts
 
+CrsrRt:	cpw	txtXY,txtREnd	; Cursor Forward
+	bcc	10$
+	rts
+10$:	dec	colorHalf
+	beq	20$
+	inw	colorPtr
+	ldb	colorHalf,#1
+20$:	adw	curWidth,txtXY
+	rts
 
-AnsiChCol:	sec
-	sbc	#30
-	pha		; * its a char color!
-	lda	ansiBflg
-	bne	32$
-	pla
-	tay
-	lda	AnsiChC1,y
-	bra	33$
-32$:	pla
-	tay
-	lda	AnsiChC2,y
-33$:	pha
-	lda	curColor
-	and	#$0f	; char colors up top
-	sta	curColor
-	pla
-	clc
-	adc	curColor
-	sta	curColor
-	jmp	AnsiLp
+CrsrLt:	cpw	txtLeft,txtXY	; Cursor Backward
+	bcc	10$
+	rts
+10$:	dec	colorHalf
+	beq	20$
+	dew	colorPtr
+	ldb	colorHalf,#1
+20$:	sbw	curWidth,txtXY
+	rts
 
-AnsiBgCol:	sec
-	sbc	#40
-	tay		; * its a bg char color!
-	lda	AnsiBgC1,y
-	pha
-	lda	curColor
-	and	#$f0
-	sta	curColor
-	pla
-	clc
-	adc	curColor
-	sta	curColor
-	jmp	AnsiLp
+CrsrTL:	mvb	txtTop,txtXY+2
+	ldw	colorLPtr,#COLOR_MATRIX+(40*2)
+	jsr	CrsrStLn
+	rts
 
-AnsiChC1:	.byte	11*16,10*16,13*16, 7*16,14*16, 4*16, 3*16, 1*16
-AnsiChC2:	.byte 0*16,2*16, 5*16, 9*16, 6*16,	 4*16,12*16, 15*16
-AnsiBgC1:	.byte	0,2,5,7,6,4,3,7,0,0
+CrsrStLn:	mvw	txtLeft,txtXY
+	mvw	colorLPtr,colorPtr
+	ldb	colorHalf,#1
+	rts
+
 
 MainLp:	mvb	rrate,A5L
 	mvb	txtXY+2,R1H
@@ -448,7 +338,7 @@ MainLp2:	jsr	ComGet
 	bcc	20$
 	lda	flgDoBg
 	beq	10$
-	mvb	R11,stringX
+	mvw	R11,stringX
 	mvb	R1H,stringY
 	jsr	PromptOn
 10$:	mvb	R1H,txtXY+2
@@ -473,24 +363,26 @@ MainLp2:	jsr	ComGet
 
 CLBfLen 	= 4		; buffer because not 0 aligned
 CLBuf	= $5c00
+txtTop:	.byte	$10
+txtBot:	.byte	199
+txtLeft:	.word	0
+txtRight:	.word	319
+txtBEnd:	.byte	199
+txtREnd:	.word	312
 
 .ramsect
-rrate:	.block 1
-savKeyVec:	.block 2
-txtXY:	.block 3
-flgDoBg:	.block 1
-flgEcho:	.block 1
-origColor:	.block 1
-baseColor:	.block 1
-curColor:	.block 1
-colorLPtr:	.block 2
-colorHalf:	.block 1
-colorBBuf:	.block $03e9-(40*2)
-ansiDex:	.block 1
-ansiBuf:	.block 32
-ansiNBuf:	.block 5
-ansiNflg:	.block 1
-ansiBflg:	.block 1
+rrate:	.block	1
+savKeyVec:	.block	2
+txtXY:	.block	3
+flgDoBg:	.block	1
+flgEcho:	.block	1
+flgANSI:	.block	1
+origColor:	.block	1
+baseColor:	.block	1
+curColor:	.block	1
+colorLPtr:	.block	2
+colorHalf:	.block	1
+colorBBuf:	.block	$03e9-(40*2)
 ; that's all folks!
 
 </pre></body></html>

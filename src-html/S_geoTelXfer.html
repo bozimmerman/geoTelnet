@@ -10,6 +10,13 @@
 XComReset:	jsr	XMOPause
 	jmp	ComReInit
 
+XFixDrive:	cpb	curDrive,VPRGdriv
+	bne	10$
+	rts
+10$:	lda	VPRGdriv
+	jsr	VPRGdev
+	jsr	VPRGok
+	rts
 
 DoXUpload:	jsr	GotoFirstMenu
 	jsr	SavColorScn
@@ -43,17 +50,16 @@ DoXUpload:	jsr	GotoFirstMenu
 	jsr	FBOXopen	; moves filename into XFilename
 	lda	XFilename
 	beq	15$
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	ldb	flgDoBg,#0
 	jmp	XUpload
 
-XferCncl:	lda	VPRGdriv
-	jsr	VPRGdev
-	jsr	VPRGok
+XferCncl:	jsr	XFixDrive
 	jsr	keySetup
 	jmp	ResColorScn	; <-- only if xfer not done
 
+PermFName:	.byte	$00
 
 FBOXobox:	.byte	$81
 	.byte	16	; getfiles
@@ -64,10 +70,14 @@ FBOXobox:	.byte	$81
 	.byte	12
 	.byte	$84,$13
 	.byte A6
+	.byte	19
+	.word ReDoMenu
 	.byte	17
 	.word FBOXsele
 	.byte	$05,$11,$16	; open icon
 	.byte	$02,$11,$4c	; cancel icon
+	.byte	15
+	.word UpBxGfx
 FBOXnoo1:	.byte	18	; drive icon
 	.byte	$11,$28
 	.word FBOXdcon
@@ -79,6 +89,12 @@ FBOXdcon:	.word FBOXdmag
 	.word FBOXswdv
 FBOXdmag:
 <img src="00064.png" />
+UpBxGfx:	.byte 1,150,0,$0f	; movepento
+	.byte	5,0	; newpattern
+	.byte	3	; rectangleto
+	.word 300
+	.byte	$0f
+	.byte	0
 
 FBOXsele:	;This routine handles clicks in the filename box
 	lda	mouseData	;was button pressed?
@@ -169,23 +185,25 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	ldw	A2,#XUpFillBuf
 	ldw	A3,#XUpRead
 	ldw	A4,#XUpBadBlk
+	ldw	A5,#XAbortChk
 	jsr	XMOsend
 	cpx	#0
 	bne	15$
 	jsr	XComReset
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	A2,#XUpDnTxt
 	jsr	OKBox
 	bra	20$
 15$:	jsr	XComReset
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	A2,#XUpErTxt
 	jsr	OKBox
-20$:	jsr	keySetup
+20$:	jsr	XFixDrive
+	jsr	keySetup
 	rts
 
 XUpDnTxt:	.byte	27,"Upload Complete!",27,0
@@ -220,6 +238,7 @@ XUpFillBuf:	jsr	XUpdBox
 	ldw	A3,#BACK_SCR_BASE + $1800
 	jsr	GetSMem
 	mvw	A2,XBufWrPtr
+	inw	XBufWrPtr
 	cpx	#0
 	bne	60$
 	inc	XMoreFlg
@@ -241,7 +260,12 @@ XUpRead:	cpw	XBufRdPtr,XBufWrPtr
 	mvw	XBufRdPtr,A6
 	inw	XBufRdPtr
 	ldx	#0
-	lda	(A6),y
+	lda	XMoreFlg
+	bne	30$
+	cpw	XBufRdPtr,XBufWrPtr
+	bne	30$
+	inx
+30$:	lda	(A6),y
 	rts	
 
 XUpBadBlk:	inc	XErrors
@@ -257,6 +281,15 @@ XferBox:	jsr	$c1a8	; i_GraphicsString
 	.byte	$03,$e0,$00,$70	; RETANGLETO  Xl,Xh,Y
 	.byte	$01,$50,$00,$38	; MOVEPENTO Xl,Xh,Y
 	.byte	$07,$e1,$00,$71	; FRAME_RECTO  Xl,Xh,Y
+
+	.byte	$05,$01	; newpattern
+	.byte	$01,$d0,$00,$60	; movepento
+	.byte	$07,$d8,$00,$68	; framerecto
+	.byte	$01,$d0,$00,$60	; movepento
+	.byte	$02,$d8,$00,$68	; line
+	.byte	$01,$d8,$00,$60	; movepento
+	.byte	$02,$d0,$00,$68	; line
+	
 	.byte	$06,$6b,$00,$65,$18,"Errors:",27,0
 	jsr	$c1a8	; i_GraphicsString
 	.byte	$06,$6b,$00,$56,$18,"Bytes:",27,0
@@ -295,12 +328,33 @@ XUpdBox:	lda	#0
 	rts		; exit from screen routine
 
 
+XAbortChk:	
+	ldb	R2L,#$60
+	ldb	R2H,#$68
+	ldw	R3,#$00d0
+	ldw	R4,#$00d8
+	jsr	IsMseInRegion
+	cmp	#$00
+	beq	90$
+	lda	mouseData
+	bne	90$
+	ldb	R2L,#$60
+	ldb	R2H,#$68
+	ldw	R3,#$00d0
+	ldw	R4,#$00d8
+	jsr	InvertRectangle
+	sec
+	rts
+90$:	clc
+	rts
+
 DoXDownload: 
 	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
 	ldw	A5,#XFilename
+	ldb	XDnFType,#$02
 	ldy	#0
 	tya
 04$:	sta	(A5),y	; clear the filename
@@ -332,7 +386,7 @@ DoXDownload:
 	jsr	FBOXcrve
 	cpx	#0
 	bne	05$
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	ldb	flgDoBg,#0
 	jmp	XDownload
@@ -342,7 +396,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	XBytesDone,#0
 	ldb	XErrors,#0
 	ldw	A2,#XFilename
-	ldb	A3L,#2	;*** TODO?
+	mvb	XDnFType,A3L
 	jsr	CreatSF
 	cpx	#0
 	beq	10$
@@ -356,28 +410,34 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	A2,#XDnRcvByte
 	ldw	A3,#XDnGooBlk
 	ldw	A4,#XDnBadBlk
+	ldw	A5,#XAbortChk
 	jsr	XMOrcvCrc
 	cpx	#0
 	bne	15$
-	ldb	A2L,#$82	; ***TODO
+	jsr	XDnFlush
+	lda	XDnFType
+	ora	#$80
+	sta	A2L
 	jsr	ClosSF
 	jsr	XComReset
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	A2,#XDnDnTxt
 	jsr	OKBox
 	bra	20$
-15$:	jsr	XDnFlush
-	ldb	A2L,#$82	; ***TODO
+15$:	ldb	A2L,#$82	; doesnt matter
 	jsr	ClosSF
+	ldw	R0,#XFilename
+	jsr	DeleteFile
 	jsr	XComReset
-	lda	#$10	; first row to clear
+	lda	windowTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	A2,#XDnErTxt
 	jsr	OKBox
-20$:	jsr	keySetup
+20$:	jsr	XFixDrive
+	jsr	keySetup
 	rts
 
 XDnDnTxt:	.byte	27,"Download Complete!",27,0
@@ -388,21 +448,24 @@ XDnFlTxt:	.byte	27,"File failure. Download cancelled",27,0
 XDnRcvByte:	pha
 	mvw	XBufWrPtr,A6
 	inw	XBufWrPtr
+	inw	XBytesDone
 	ldy	#0
 	pla
 	sta	(A6),y
 	rts	
 
-XDnFlush:	ldw	A2,#BACK_SCR_BASE
+XDnFlush:	cwi	XBufWrPtr,#BACK_SCR_BASE
+	bne	10$
+	rts
+10$:	ldw	A2,#BACK_SCR_BASE
 	mvw	XBufWrPtr,A3
+	dew	A3
 	jsr	PutSMem
 	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jsr	XComReset
 	rts
 
-XDnGooBlk:	mvw	XBufWrPtr,XBufRdPtr
-	avw	#128,XBytesDone
-	jsr	XUpdBox
+XDnGooBlk:	jsr	XUpdBox
 	cwi	XBufWrPtr,#BACK_SCR_BASE+$1700
 	bcc	10$
 	jsr	XDnFlush
@@ -410,7 +473,6 @@ XDnGooBlk:	mvw	XBufWrPtr,XBufRdPtr
 
 
 XDnBadBlk:	inc	XErrors
-	mvw	XBufRdPtr,XBufWrPtr
 	jsr	XUpdBox
 	rts
 
@@ -517,20 +579,77 @@ FBOXcbox:	.byte	$80 | $01
 	.byte	$16,$22
 	.word	FBOXtxt5
 	.byte	13	;GetString
-	.byte	$16,$33	;XOffset.Yalso
+	.byte	$1a,$26	;XOffset.Yalso
 	.byte	A5	
-	.byte	18	;maximum # of chars to accept.
+	.byte	16	;maximum # of chars to accept.
+	.byte	15	; do graphics table
+	.word	FBOXgfx
+	.byte	11	;add text
+	.byte	$1e,$40
+	.word	FBOXttt
+	.byte	11	;add text
+	.byte	$3d,$40
+	.word	FBOXttt+4
 	.byte	$02,$10,$47	;Cancel icon
+	.byte	17
+	.word	FBOXclk
 FBOXnod1:	.byte	18	;drive icon
 	.byte	$09,$47
 	.word	FBOXdcn2
 FBOXnod2:	.byte	$06,$02,$47	;DISK icon
 	.byte	0	;end of defintion
-FBOXdcn2:
-	.word	FBOXdmag	;graphic location
+FBOXdcn2:	.word	FBOXdmag	;graphic location
 	.word	0	;leave this at 0
 	.byte	$06,$10	;width, set below
 	.word	FBOXswdv	;location of action routine
+FBOXgfx:	.byte	5,0	; pattern 0
+	.byte	1,83,0,88	; movepento
+	.byte	3,92,0,96	; prg recto
+	.byte	1,115,0,88	; movepento
+	.byte	3,123,0,96	; seq recto
+	.byte	5,1	; pattern 1
+XPRGgfx:	.byte	1,83,0,88	; movepento
+	.byte	3,92,0,96	; prg recto
+XSEQgfx:	.byte	1,115,0,88	; movepento
+	.byte	7,123,0,96	; seq recto
+	.byte	0
+FBOXttt:	.byte	"PRG",0,"SEQ",0
+
+
+
+FBOXclk:	lda	mouseData
+	beq	10$
+	rts
+10$:	cbi	XDnFType,#$02
+	bne	20$
+	mvb	XSEQgfx+3,R2L
+	mvb	XSEQgfx+7,R2H
+	mvw	XSEQgfx+1,R3
+	mvw	XSEQgfx+5,R4
+	jsr	IsMseInRegion
+	cmp	#$00
+	bne	15$
+	rts
+15$:	ldb	XDnFType,#$01
+	ldb	XPRGgfx+4,#7
+	ldb	XSEQgfx+4,#3
+	ldw	R0,#FBOXgfx
+	jsr	GraphicsString
+	rts
+20$:	mvb	XPRGgfx+3,R2L
+	mvb	XPRGgfx+7,R2H
+	mvw	XPRGgfx+1,R3
+	mvw	XPRGgfx+5,R4
+	jsr	IsMseInRegion
+	cmp	#$00
+	bne	25$
+	rts
+25$:	ldb	XDnFType,#$02
+	ldb	XSEQgfx+4,#7
+	ldb	XPRGgfx+4,#3
+	ldw	R0,#FBOXgfx
+	jsr	GraphicsString
+	rts
 
 
 FBOXtxt0:	.byte	$18,"Please select an option:",27,0
@@ -544,7 +663,7 @@ FBOXtxt7:  	.byte	$18,"Insert new disk into disk drive.",27,0
 FBOXtxt8:  	.byte	$18,"ERROR: File exists!",27,0
 FBOXtxt9:  	.byte	$18,"ERROR: Disk full!",27,0
 FBOXtxtA:  	.byte	$18,"ERROR: Cannot create!",27,0
-
+XDnFType:	.byte	$02
 
 .ramsect
 XFilename:	.block 20
@@ -554,4 +673,5 @@ XBufRdPtr:	.block 2
 XMoreFlg:	.block 1
 XBytesDone:	.block 2
 XErrors:	.block 1
+
 </pre></body></html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+.noeqin
+.include	GEOSequates
+.glbl
+.eqin
+
+
+.psect
+
+
+
+
+AnsiStart:	lda	flgANSI
+	bne	10$
+	rts
+10$:	lda	#1
+	sta	ansiDex
+	ldb	ansiNBuf,#0
+	ldb	ansiNflg,#0
+	rts
+
+AnsiBroke:	sty	ansiBuf+26
+	ldy	ansiDex
+	lda	#0
+	sta	ansiDex
+	sta	ansiBuf,y
+	mvw	R0,ansiBuf+24
+	ldw	R0,#ansiBuf
+	jsr	PutChar2
+	mvw	ansiBuf+24,R0
+AnsiOut:	ldy	ansiBuf+26
+	ldb	ansiDex,#0
+	ldb	ansiNBuf,#0
+	ldb	ansiNflg,#0
+	rts
+
+
+
+AnsiCont:	sty	ansiBuf+26
+	ldy	ansiDex
+10$:	dey
+	sta	ansiBuf,y
+	inc	ansiDex
+	cpy	#23
+	bcc	11$
+	ldy	ansiBuf+26
+	jmp	AnsiBroke
+11$:	ldy	ansiBuf+26
+	cmp	#91	; char '['
+	bne	33$
+	lda	ansiDex
+	cmp	#2
+	beq	32$
+31$:	jmp	AnsiBroke
+32$:	rts	
+33$:	cmp	#59	; char ';'
+	bne	35$
+	ldb	ansiNflg,#0
+	rts
+35$:	cmp	#48	; char '0'
+	bcc	31$
+	cmp	#58	; char ':'
+	bcc	37$
+	jmp	AnsiOthC
+37$:	sec		; math is hard
+	sbc	#48
+	pha
+	lda	ansiNflg
+	bne	40$
+	pla		; first digit, just store
+	inc	ansiNBuf	; first of digit means 1 digit
+	ldy	ansiNBuf
+	sta	ansiNBuf,y
+	inc	ansiNflg
+	ldy	ansiBuf+26
+	rts
+40$:	ldy	ansiNBuf	; next digit,mul x 10
+	lda	ansiNBuf,y
+	pha
+	asl	a
+	asl	a	; mul by 8
+	asl	a
+	sta	ansiNBuf,y
+	pla
+	pha
+	clc
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	pla
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	pla		; the new digit
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	ldy	ansiBuf+26
+	rts
+
+AnsiOthC:	sta	AnsiChtt-1
+	ldy	#$ff
+10$:	iny
+	lda	AnsiChtt,y
+	bne	20$
+15$:	ldy	ansiBuf+26
+	jmp	AnsiBroke
+20$:	cmp	AnsiChtt-1
+	bne	10$
+	tya
+	asl	a
+	tay
+	lda	AnsiDhtt,y
+	sta	AnsiBhtt+1
+	iny
+	lda	AnsiDhtt,y
+	beq	15$
+	sta	ansiBhtt+2
+	ldy	ansiBuf+26
+	mvw	R11,txtXY
+	mvb	R1H,txtXY+2
+AnsiBhtt:	jsr	AnsiBroke
+	mvw	txtXY,R11
+	mvb	txtXY+2,R1H
+	ldy	ansiBuf+26
+	rts
+
+	.byte	0	; AnsiChtt-1 - temp .a sav
+AnsiChtt:	.byte	"mHfABCDsuJKhlpEFG",0
+AnsiDhtt:	.word	Ansi_m_, Ansi_H, Ansi_f_, AnsiADone
+	.word	AnsiBDone, AnsiCDone, AnsiDDone, AnsisDone
+	.word	AnsiuDone, AnsiJDone, AnsiKDone, Ansi_h_
+	.word	Ansi_l_, AnsipDone, AnsiEDone, Ansi_F
+	.word	AnsiGDone
+
+Ansi_m_:	lda	ansiNBuf
+	bne	10$	
+	jmp	AnsiOut
+10$:	cmp	#1	; is simple code?
+	bne	20$
+	lda	ansiNBuf+1
+	; ** do bold, etc
+	jmp	AnsiOut
+20$:	lda	ansiNBuf+1	; is it the reset code?
+	bne	30$
+	lda	ansiNBuf+2
+	bne	30$
+	mvb	baseColor,curColor	
+	ldb	currentMode,#0	; * reset achieved!
+	jmp	AnsiOut
+30$:	ldy	#1
+	sty	AnsiLp+1
+	sty	AnsiBflg
+AnsiLp:	ldy	#1
+	dey
+	cpy	ansiNBuf
+	bcc	10$
+	jmp	AnsiOut
+10$:	inc	AnsiLp+1
+	lda	ansiNBuf+1,y
+	cmp	#1
+	bne	20$
+	ldb	AnsiBflg,#0
+	jmp	AnsiLp
+20$:	cmp	#30
+	bcs	31$
+	jmp	AnsiLp
+31$:	cmp	#38
+	bcs	40$
+	jmp	AnsiChCol	; * its a char color!
+40$:	cmp	#40
+	bcs	42$
+41$:	jmp	AnsiLp
+42$:	cmp	#50
+	bcs	41$
+	jmp	AnsiBgCol	; * its a bg color
+
+
+
+AnsiChCol:	sec
+	sbc	#30
+	pha		; * its a char color!
+	lda	ansiBflg
+	bne	32$
+	pla
+	tay
+	lda	AnsiChC1,y
+	bra	33$
+32$:	pla
+	tay
+	lda	AnsiChC2,y
+33$:	pha
+	lda	curColor
+	and	#$0f	; char colors up top
+	sta	curColor
+	pla
+	clc
+	adc	curColor
+	sta	curColor
+	jmp	AnsiLp
+
+AnsiBgCol:	sec
+	sbc	#40
+	tay		; * its a bg char color!
+	lda	AnsiBgC1,y
+	pha
+	lda	curColor
+	and	#$f0
+	sta	curColor
+	pla
+	clc
+	adc	curColor
+	sta	curColor
+	jmp	AnsiLp
+
+AnsiChC1:	.byte	11*16,10*16,13*16, 7*16,14*16, 4*16, 3*16, 1*16
+AnsiChC2:	.byte 0*16,2*16, 5*16, 9*16, 6*16,	 4*16,12*16, 15*16
+AnsiBgC1:	.byte	0,2,5,7,6,4,3,7,0,0
+
+Ansi_H:	jmp	Ansi_f_	; Cursor Position Y,X
+Ansi_f_:	jsr	CrsrTL
+	lda	ansiNBuf	; Cursor Position Y,X
+	bne	10$
+99$:	jmp	AnsiOut
+10$:	lda	ansiNBuf+1
+	beq	20$
+	jsr	CrsrDn
+	dec	ansiNBuf+1
+	bne	10$
+20$:	cbi	ansiNBuf,#2
+	bcc	99$
+30$:	lda	ansiNBuf+2
+	beq	99$
+	jsr	CrsrRt
+	dec	ansiNBuf+2
+	bne	30$
+	jmp	AnsiOut
+
+	
+
+AnsiADone:	jsr	CrsrUp
+	jmp	AnsiOut
+
+AnsiBDone:	jsr	CrsrDn
+	jmp	AnsiOut
+
+AnsiCDone:	jsr	CrsrRt
+	jmp	AnsiOut
+
+AnsiDDone:	jsr	CrsrLt
+	jmp	AnsiOut
+
+
+
+AnsiEDone:	jsr	CrsrStLn	; Cursor down N lines
+	lda	ansiNBuf
+	bne	10$
+	ldy	#1
+	bra	20$
+10$:	ldy	ansiNBuf+1
+20$:	jsr	CrsrDn
+	dey
+	bne	20$
+	jmp	AnsiOut
+
+Ansi_F:	jsr	CrsrStLn	; Cursor back N lines up
+	lda	ansiNBuf
+	bne	10$
+	ldy	#1
+	bra	20$
+10$:	ldy	ansiNBuf+1
+20$:	jsr	CrsrUp
+	dey
+	bne	20$
+	jmp	AnsiOut
+
+AnsiGDone:	jsr	CrsrStLn	; Move to column N, default 1
+	lda	ansiNBuf
+	bne	10$
+99$:	jmp	AnsiOut
+10$:	ldy	ansiNBuf
+20$:	dey
+	beq	99$
+	jsr	CrsrRt
+	bra	20$
+
+
+AnsisDone:	mvw	txtXY,AnsiASv	; Save Position
+	mvb	txtXY+2,AnsiASv+2
+	mvw	colorLPtr,AnsiCSv1
+	mvw	colorPtr,AnsiCSv2
+	mvb	colorHalf,AnsiCSv3
+	jmp	AnsiOut
+
+AnsiuDone:	mvw	AnsiASv,txtXY	; Restore Position
+	mvb	AnsiASv+2,txtXY+2
+	mvw	AnsiCSv1,colorLPtr
+	mvw	AnsiCSv2,colorPtr
+	mvb	AnsiCSv3,colorHalf
+	jmp	AnsiOut
+
+
+AnsiJDone:	jsr	CrsrTL	; Screen clear and top-left
+	lda	txtTop
+	jsr	ClrTrmScn	; lda from prev MATTERS
+	jmp	AnsiOut	; Erase Display and 0,0
+
+AnsiKDone:	lda	#0
+	jsr	SetPattern
+	mvb	txtXY+2,R2L
+	mvb	txtXY+2,R2H
+	adb	curHeight,R2H
+	mvw	txtXY,R3
+	mvw	txtRight,R4
+	jsr	Rectangle
+	jmp	AnsiOut	; Erase Pos->EOL (inclusive)
+
+
+Ansi_h_:	jmp	AnsiOut		; Screen Mode (ignore)
+Ansi_l_:	jmp	AnsiOut		; Reset Mode (resets h - ignore)
+AnsipDone:	jmp	AnsiOut		; Set Keyboard (ignore)
+
+
+.ramsect
+ansiDex:	.block	1
+ansiBuf:	.block	32
+ansiNBuf:	.block	5
+ansiNflg:	.block	1
+ansiBflg:	.block	1
+ansiASv:	.block	3
+ansiCSv1:	.block	2
+ansiCSv2:	.block	2
+ansiCSv3:	.block	1
+</pre></body></html>

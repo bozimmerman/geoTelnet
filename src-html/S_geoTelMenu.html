@@ -162,17 +162,25 @@ Menu03b:	.word MnuTxt08	; menu text pointer
 	.word MenuAct	; **** action routine here!
 
 
-Menu04:	.byte	$0f,$2b	; menu top, bottom
+Menu04:	.byte	$0f,$47	; menu top, bottom
 	.word $006c,$00b0	; menu left, right
-	.byte	$80|$02	; HORIZONTAL menu | # items
+	.byte	$80|$04	; HORIZONTAL menu | # items
 	.word MnuTxt0e	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doEchoOn	; **** action routine here!
 	.word MnuTxt0f	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doEchoOff	; **** action routine here!
+	.word MnuTxt40	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doANSIOn	; **** action routine here!
+	.word MnuTxt41	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doASCIIOn	; **** action routine here!
 MnuTxt0e:	.byte	27,"echo on",27,0
 MnuTxt0f:	.byte	27,"echo off",27,0
+MnuTxt40:	.byte	27,"ANSI term",27,0
+MnuTxt41:	.byte	27,"ASCII term",27,0
 
 
 
@@ -225,6 +233,31 @@ FixEcho:	lda	#27
 	rts
 10$:	lda	#26
 	sta	MnuTxt0f
+	rts
+
+
+
+
+doANSIOn:	lda	#$01
+	sta	flgANSI
+	jsr	FixATerm
+	jmp	GotoFirstMenu
+
+doASCIIOn:	lda	#$00
+	sta	flgANSI
+	jsr	FixATerm
+	jmp	GotoFirstMenu
+
+FixATerm:	lda	#27
+	sta	MnuTxt40
+	sta	MnuTxt41
+	lda	flgANSI
+	beq	10$
+	lda	#26
+	sta	MnuTxt40
+	rts
+10$:	lda	#26
+	sta	MnuTxt41
 	rts
 
 
