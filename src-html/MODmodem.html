@@ -17,11 +17,13 @@
 ;*	ComInit(	.byte	Input Buffer Addr Page (unimpl)
 ;*		.byte	Size of A2 Buf in Pages (unimpl)
 ;*		.byte	Baud Rate Code
-;*		.byte	Flow Control Code (unimpl) )
+;*		.byte	Flow Control Code )
 ;*	ComUninst(	)
 ;*	ComReInit(	)
 ;*	ComDisable(	)
 ;*	ComEnable(	)
+;*	ComFlon(	)
+;*	ComFloff(	)
 ;*	ComOnline(	) .ne = online, .eq = not online
 ;*	ComSend(	.a byte to send )
 ;*	ComSPut(	.a byte to send )
@@ -44,7 +46,7 @@
 ;*	A2L Input Buffer Addr Page (unimpl)
 ;*	A2H Size of A2 Buf in Pages (unimpl)
 ;*	A3L Baud Rate Code
-;*	A3H Flow Control Code (unimpl)
+;*	A3H Flow Control Code
 ;*
 ;*
 ;* Flow Ctrl:	0=None, $40=XOFF, 
@@ -130,6 +132,7 @@ CLL2_0FF:	pha
 	sta $01
 	pla
 	rts
+
 CLL2_0N:	pha
 	lda #$35
 	sta $01
@@ -162,17 +165,7 @@ ComReInit:	sei
 ;* Inputs:
 ;*
 ;************************
-ComDisable:	bit CLL2FloC
-	bpl 10$
-	jsr CLL2_0N
-	lda $dd01
-	and #$fd
-	sta $dd01
-	jsr CLL2_0FF
-	bit CLL2FloC
-10$:	bvc 30$
-	lda #$13
-	jsr ComSend
+ComDisable:	jsr ComFloff
 20$:	lda CLL2Busy
 	bmi 20$
 30$:	jsr CLL2_0N
@@ -202,16 +195,8 @@ ComEnable:	jsr CLL2_0N
 	sta CLL2Busy
 	lda #$90
 	sta $dd0d
-	bit CLL2FloC
-	bpl 10$
-	lda $dd01
-	ora #$02
-	sta $dd01
-	bit CLL2FloC
-10$:	bvc 20$
-	lda #$11
-	jsr ComSend
-20$:	jsr CLL2_0FF
+	jsr CLL2_0FF
+	jsr ComFlon
 	clc 
 	rts 
 
@@ -222,7 +207,9 @@ ComEnable:	jsr CLL2_0N
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	lda	$01
+ComOnline:	lda	#0	; **BZ:DELME
+	rts
+	lda	$01
 	pha
 	lda	#$35
 	sta	$01
@@ -336,9 +323,15 @@ CLL2NMI_:	lda #$02
 	tay
 	cpb CLL2BfWdx,CLL2BfFdx
 	bne 20$
+	bit CLL2FloC
+	bpl 10$
 	lda $dd01
 	and #$fd
 	sta $dd01
+	bit CLL2FloC
+10$:	bvc 20$
+	lda #$13
+	;jsr ComSend	; obviously a bad idea.
 20$:	lda #$90
 	sta $dd0d
 CLNMIXit:	pla
@@ -448,7 +441,76 @@ ComGet:	lda CLL2BfRdx
 	cmp CLL2BfWdx
 	bne 20$
 	sec 
-	lda #$0CLL2Busy:	.byte $01 ; busy flag
+	lda #$00
+	rts 
+20$:	tya
+	pha
+	ldy CLL2BfRdx
+	lda CLL2Buff,y
+	sta CLL2Byte
+	inc CLL2BfFdx
+	inc CLL2BfRdx
+	cpb CLL2BfRdx,CLL2BfWdx
+	bne 30$
+	jsr ComFlon
+30$:	pla
+	tay
+40$:	lda CLL2Byte
+	clc 
+	rts 
+
+;**********************************
+;* ComFlon	Turn on incoming data by 
+;*	turnning on RTS flag
+;* Inputs:
+;* Outputs:
+;**********************************
+ComFlon:	pha
+	bit CLL2FloC
+	bpl 10$
+	lda $01
+	pha
+	lda #$35
+	sta $01
+	lda $dd01
+	ora #$02
+	sta $dd01
+	pla
+	sta $01
+	bit CLL2FloC
+10$:	bvc 20$
+	lda #$11
+	jsr ComSend
+20$:	pla
+	rts
+
+;**********************************
+;* ComFloff	Turn off incoming data by 
+;*	turnning off RTS flag
+;* Inputs:
+;* Outputs:
+;**********************************
+ComFloff:	pha
+	bit CLL2FloC
+	bpl 10$
+	lda $01
+	pha
+	lda #$35
+	sta $01
+	lda $dd01
+	and #$fd
+	sta $dd01
+	pla
+	sta $01
+	bit CLL2FloC
+10$:	bvc 30$
+	lda #$13
+	jsr ComSend
+30$:	pla
+	rts
+
+
+CLL2Busy:	.byte $01 ; busy flag
 CLL2BfRdx:	.byte $00
 CLL2BfWdx:	.byte $00
 CLL2BfFdx:	.byte $F0
@@ -480,4 +542,5 @@ CLL2PBVals:	.byte $00,$0d,$10,$0d,$34,$03,$42,$03
 .ramsect
 CLL2nmsv:	.block 2
 CLL2Buff:	.block 256
+CLL2End:
 </pre></body></html>

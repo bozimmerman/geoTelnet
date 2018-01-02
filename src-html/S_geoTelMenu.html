@@ -44,11 +44,13 @@ MenuAct:	jmp	GotoFirstMenu	; GotoFirstMenu
 
 BackMenu:	jsr	ScreenSafe
 	jsr	SavColorScn
+	jsr	keyRestore
 	mvw	RecoverVector, RecoMenu+1
 	ldw	RecoverVector,#RecoMenu
 	rts
 
 RecoMenu:	jsr	$8fc2
+	jsr	keySetup
 	jsr	ResColorScn
 	mvw	RecoMenu+1,RecoverVector
 	rts
@@ -326,12 +328,14 @@ GetBaudPtr:	asl	a
 
 DAinit:	jsr	ScreenSafe
 	jsr	SavColorScn
+	jsr	keyRestore
 	jsr	ComDisable
 	jsr	ComUninst
 	rts
 
 DAdone:	jsr	ResColorScn
 	jsr	ComReInit
+	jsr	keySetup
 	rts
 
 ;* Baud Cds:	0=300, 1=1200, 2=2400,3=4800
