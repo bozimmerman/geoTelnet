@@ -90,9 +90,11 @@ QConnPhb:	jsr	GotoFirstMenu
 	jsr	keySetup
 	jmp	ResColorScn
 30$:	jsr	NewPhb
-	bra	10$
+	jsr	MvCurrPg	; *TODO: better pg move
+	bra	15$
 40$:	jsr	OldPhb
-	bra	10$
+	jsr	MvCurrPg
+	bra	15$
 50$:	jmp	OpenPhNm
 
 QPhbDat:	.byte	$01	; size flag, and shadow pattern
@@ -225,29 +227,30 @@ PhbImg00:
 
 MovePhPg:	;.byte	$05,$74	; col,row
 	;.byte	$0b,$10	; pic width and height
-	ldb	R2L,#$74
-	ldb	R2H,#$84
-	ldw	R3,#($05 * $08)
+	;.byte	$1f,$a9,$36,$00,$08,$01	; dialog box dimensions
+	ldb	R2L,#($1f + $74)
+	ldb	R2H,#($1f + $84)
+	ldw	R3,#$59
 	mvw	R3,R4
-	avw	#22,R4
+	avw	#$15,R4
 	jsr	IsMseInRegion	; did we click HERE
 	cmp	#$00
 	beq	10$	; no, so check next box
 	jmp	MovePhBot
 10$:	mvw	R4,R3
-	avw	#22,R4
+	avw	#$15,R4
 	jsr	IsMseInRegion
 	cmp	#$00
 	beq	20$
 	jmp	MovePhTop
 20$:	mvw	R4,R3
-	avw	#22,R4
+	avw	#$15,R4
 	jsr	IsMseInRegion
 	cmp	#$00
 	beq	30$
 	jmp	MovePhUp
 30$:	mvw	R4,R3
-	avw	#22,R4
+	avw	#$15,R4
 	jsr	IsMseInRegion
 	cmp	#$00
 	beq	40$
@@ -259,28 +262,34 @@ MovePhPg:	;.byte	$05,$74	; col,row
 MovePhUp:	cwi	PhPagesDex,#PhPages
 	bne	10$
 	rts
-10$:	mvw	PhPagesDex, A0
+10$:	svw	#2,PhPagesDex
+	jsr	MvCurrPg
+	jmp	FillPhPg
+
+MvCurrPg:	mvw	PhPagesDex, A0
 	ldy	#0
 	lda	(A0),y
-	sta	PhPages
+	sta	PhPage
 	iny
 	lda	(A0),y
-	sta	PhPages+1
-	svw	#2,PhPagesDex
-	jmp	FillPhPg
+	sta	PhPage+1
+	rts
 
 MovePhDn:	lda	PhLastFl
 	beq	10$
 	rts
-10$:	avw	#2,PhPagesDex
+10$:	jsr MvPgDown
+	jmp	FillPhPg
+
+MvPgDown:	avw	#2,PhPagesDex
 	mvw	PhPagesDex,A0
 	ldy	#0
-	lda	PhPages
+	lda	PhPage
 	sta	(A0),y
 	iny
-	lda	PhPages+1
+	lda	PhPage+1
 	sta	(A0),y
-	jmp	FillPhPg
+	rts
 
 MovePhTop:	cwi	PhPagesDex,#PhPages
 	bne	10$
@@ -336,7 +345,7 @@ NPhbDat:	.byte	$01	; size flag, and shadow pattern
 NPhbTxt00:	.byte	$18,"Enter a name for this connection",27,0
 
 
-OldPhb:	jsr	LdSelPhb
+OldPhb:	jsr	LdSelPhb	; already does clrnamhost
 	beq	10$
 	rts
 10$:	ldy	#1
@@ -389,7 +398,7 @@ DelPhNm:	jsr	LdSelPhb
 	dey
 	bpl	11$
 	jsr	WrCurPhBlk
-	ldw	PhPage,#0
+	jsr	MvCurrPg
 	jmp	FillPhPg
 	rts
 
@@ -446,7 +455,10 @@ OpenPhNm:	jsr	LdSelPhb
 
 
 MkNewHost:
-	jsr	FirstPhNm
+	mvb	PhPgDims,A2H
+	avb	#$07,A2H
+	ldw	PhPage,#0
+	jsr	NextPhNm
 10$:	lda	R0H
 	bne	15$
 	jsr	MkNewHBlk
@@ -455,8 +467,15 @@ MkNewHost:
 15$:	ldy	#0
 	lda	(R0),y
 	beq	MkOldHost
-	jsr	NextPhNm
+	avb	#$09,A2H
+	cpb	A2H,PhPgDims+1
+	bcc	20$
+	jsr	MvPgDown
+	mvb	PhPgDims,A2H
+	avb	#$07,A2H
+20$:	jsr	NextPhNm
 	bra	10$
+
 MkOldHost:	ldw	R1,#NewName
 	ldy	#0
 21$:	lda	(R1),y
@@ -481,6 +500,8 @@ WrCurPhBlk:	ldw	R2,#$00fe
 	rts
 30$:	jsr	UpdateRecordFile
 	rts
+
+
 
 MkNewHBlk:	
 	jsr	AppendRecord
@@ -514,7 +535,7 @@ PhPgDims:	.byte	$31,$90
 	sta	windowTop,y
 	dey
 	bpl	10$
-	ldy	#2*16
+	ldy	#31
 15$:	lda	#0
 	sta	PhPgRefs,y
 	dey
@@ -559,13 +580,20 @@ NextPhNm:	ldw	R0,#0
 	beq	09$
 	ldw	PhPage,#0
 09$:	rts
-10$:	lda	PhPage+1
+10$:	cpb	PhPage,curRecord
+	beq	20$
+	lda	PhPage+1
+	pha
+	jsr	ThisPhBlk
+	pla
+	sta	PhPage+1
+20$:	lda	PhPage+1
 	cmp	#170
-	bcs	20$
+	bcs	30$
 	add	#84
 	sta	PhPage+1
 	jmp	PhMkR0
-20$:	jsr	NextPhBlk
+30$:	jsr	NextPhBlk
 	rts
 
 FirstPhNm:	ldw	PhPage,#0
@@ -573,7 +601,7 @@ FirstPhNm:	ldw	PhPage,#0
 	ldw	PhPages,#0
 NextPhBlk:	ldw	R0,#0
 	inc	PhPage
-	lda	PhPage
+ThisPhBlk:	lda	PhPage
 	jsr	PointRecord
 	cpx	#0
 	bne	09$
