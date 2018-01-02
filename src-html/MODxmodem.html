@@ -59,9 +59,11 @@ XMOrcvSt:	mvw	A2,XMORcVec+1	; receive 1 byte in .a
 	inc	XMOBlock
 	lda	XMOXType
 	bne	10$
-	lda	#XMO_CNAK
-	jsr	ComSPut
-10$:	jmp	XMOrcvLp
+	lda	#XMO_NAK
+	bne	20$
+10$:	lda	#XMO_CNAK
+20$:	jsr	ComSPut
+	jmp	XMOrcvLp
 
 XMORcVec:	jmp	XMONada	; receive 1 byte
 XMORgVec:	jmp	XMONada	; good block receive bytes
@@ -116,7 +118,7 @@ XMOrcvLp:	lda	XMOErrors
 20$:	cpb	XMOBuf+1, XMOBlock
 	bne	19$
 	eor	#$ff
-	cmp	XMOBuf+1
+	cmp	XMOBuf+2
 	bne	19$
 	jsr	XMOchkBlk
 	lda	XMOXType
@@ -134,7 +136,8 @@ XMOrcvLp:	lda	XMOErrors
 XMOConRcv:	lda	XMOGood
 	beq	20$
 	ldb	XMOBufCt,#0
-10$:	lda	XMOBufCt,y
+10$:	ldy	XMOBufCt
+	lda	XMOBuf3,y
 	jsr	XMORcVec
 	inc	XMOBufCt
 	cbi	XMOBufCt,#$80

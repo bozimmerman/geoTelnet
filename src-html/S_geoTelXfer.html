@@ -335,8 +335,8 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	XBytesDone,#0
 	ldb	XErrors,#0
 	ldw	A2,#XFilename
-	ldb	A3L,#2
-	jsr	OpenSF
+	ldb	A3L,#2	;*** TODO?
+	jsr	CreatSF
 	cpx	#0
 	beq	10$
 	ldw	A2,#XDnFlTxt
@@ -396,7 +396,8 @@ XDnGooBlk:	avw	#128,XBytesDone
 10$:	rts
 
 
-XDnBadBlk:	inc	XErrors
+XDnBadBlk:	svw	#128,XBufWrPtr
+	inc	XErrors
 	jsr	XUpdBox
 	rts
 
@@ -473,9 +474,8 @@ FBOXcrve:	jsr	GetDirHead	;get BAM into memory
 	lda	R4L
 	cmp	#$14	;20 blocks minimum
 	bcs	11$
-	ldw	A6,#FBOXtxt9	;not enough blocks
-10$:	ldw	R0,#FBOXnbox
-	jsr	DoDlgBox	;whine and exit
+	ldw	A2,#FBOXtxt9	;not enough blocks
+10$:	jsr	OKBox	;whine and exit
 	ldx	#$ff
 99$:	rts
 11$:	ldb	$886e,#$ff	;check for file existance
@@ -485,26 +485,13 @@ FBOXcrve:	jsr	GetDirHead	;get BAM into memory
 	beq	13$
 	cpx	#$00
 	bne	12$
-	ldw	A6,#FBOXtxt8
+	ldw	A2,#FBOXtxt8
 	bra	10$
-12$:	ldw	A6,#FBOXtxtA	;other errors
+12$:	ldw	A2,#FBOXtxtA	;other errors
 	bra	10$
-13$:	ldy	#0
-14$:	lda	(A5),y
-	sta	XFilename,y
-	beq	15$
-	iny
-	bne	14$
-15$:	ldx	#$00
+13$	ldx	#$00
 	rts		;enough blocks
 
-FBOXnbox:
-	.byte	$80 | $01
-	.byte	12	;add text
-	.byte	$20,$1b
-	.byte	A6
-	.byte	$02,$0f,$40	;cancel icon
-	.byte	0	;end of defintion
 
 FBOXcbox:	.byte	$80 | $01
 	.byte	11	;add text
