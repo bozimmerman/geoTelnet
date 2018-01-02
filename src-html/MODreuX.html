@@ -48,8 +48,8 @@
 OpenRR:	jsr	REUxVal
 	beq	10$
 	rts
-10$:	ldb	REUxRPg,#0
-	sta	REUxRDx
+10$:	mvb	REUxTPg,REUxRPg
+	ldb	REUxRDx,#0
 REUxRChk:	cpb	REUxRPg,REUxWPg
 	bcs	20$
 15$:	ldx	#0
@@ -62,8 +62,11 @@ REUxRChk:	cpb	REUxRPg,REUxWPg
 
 
 ;*	SeekRR(.word Pointer to read position ) .x error
-SeekRR:	mvb	A2L,REUxRPg
-	mvb	A2H,REUxRDx
+SeekRR:	lda	A2H
+	clc
+	adc	REUxTPg
+	sta	REUxRPg
+	mvb	A2L,REUxRDx
 	jmp	REUxRChk
 
 ;*	SeekRW( ) .x error
@@ -74,6 +77,7 @@ SeekRW:	mvb	REUxWPg,REUxRPg
 10$:	ldx	#0
 	rts
 20$:	lda	REUxRPg
+	cmp	REUxTPg
 	beq	30$
 	dec	REUxRPg
 	ldx	#0
@@ -96,6 +100,7 @@ REUxVal:	ldx	#0
 
 
 REUxFtch:	pha
+	mvb	R1H,REUxFtc1+1
 	.byte	$a9	; lda immediate
 REUxCdty:	.byte	0	; curr pg dirty flag
 	beq	10$
@@ -108,7 +113,10 @@ REUxCdty:	.byte	0	; curr pg dirty flag
 	sta	REUxCPg
 	sta	R1H
 	jsr	REUxROp
-	jmp	FetchRAM	; finish the fetch
+	jsr	FetchRAM	; finish the fetch
+REUxFtc1:	lda	#0
+	sta	R1H
+	rts
 
 REUxROp:	ldw	R0,#REUxBlk
 	ldb	R1L,#0
@@ -119,13 +127,14 @@ REUxBnk:	.byte	7
 	rts
 
 ;*	GetRByte()	.a	byte read in, .x error
-GetRByte:	jsr	REUxGet
-	beq	10$
-	rts
-10$:	inc	REUxRDx
-	bne	20$
+GetRByte:	sty	GetROt+1
+	jsr	REUxGet
+	bne	GetROt
+	inc	REUxRDx
+	bne	GetROt
 	inc	REUxRPg
-20$:	rts
+GetROt:	ldy	#0
+	rts
 
 REUxGet:	.byte	$a9	; lda immediate
 REUxRPg:	.byte	0
@@ -133,10 +142,12 @@ REUxRPg:	.byte	0
 	beq	10$
 	jsr	REUxFtch
 	lda	REUxRPg
-10$:	cmp	REUxWPg
-	bne	REUxFGt
+10$:	pha
 	.byte $a0	; ldy immediate
 REUxRDx:	.byte	0	
+	pla
+	cmp	REUxWPg
+	bne	REUxFGt
 	cpy	REUxWDx	; now chk byte
 	bcc	REUxGet
 	ldx	#$ff
@@ -146,21 +157,23 @@ REUxFGt:	lda	REUxBlk,y
 	rts	
 
 ;*	GetRevB() .a byte read in, .x error
-GetRevB:	jsr	REUxGet
-	beq	10$
-	rts
-10$:	ldx	REUxRDx
+GetRevB:	sty	GetRvOt+1
+	jsr	REUxGet
+	bne	GetRvOt
+	ldx	REUxRDx
 	beq	30$
 	dec	REUxRDx
 	ldx	#0
-	rts
+	beq	GetRvOt
 30$:	ldx	REUxRPg
+	cmp	REUxTPg	; check against header
 	bne	40$
 	ldx	#$ff
-	rts
+	bne	GetRvOt
 40$:	dec	REUxRDx
 	dec	REUxRPg
 	ldx	#0
+GetRvOt:	ldy	#0
 	rts
 
 ;*	CreatRW() * .x error
@@ -169,12 +182,14 @@ CreatRW:	jsr	REUxVal
 	rts
 10$:	ldb	REUxWPg,#0
 	sta	REUxRDx
+	sta	REUxTPg
 REUxWChk:	ldx	#0
 	rts
 
 
 ;*	PutRByte(.a	Byte to write out) *
-PutRByte:	pha
+PutRByte:	sty	PutROt+1
+	pha
 	.byte	$a9	; lda immediate
 REUxWPg:	.byte	0
 	cmp	REUxCPg
@@ -184,16 +199,22 @@ REUxWPg:	.byte	0
 REUxWDx:	.byte	0	
 	pla
 	sta	REUxBlk,y
-10$:	inc	REUxCdty
+10$:	inc	REUxCdty	; set dirty flag
 	beq	10$
 	inc	REUxWDx
-	bne	20$
+	bne	PutROt
 	inc	REUxWPg
-	bne	20$
-	ldx	#$ff
+	lda	REUxWPg
+	.byte	$c9	; cmp immediate
+REUxTPg:	.byte 0
+	bne	PutROt
+	lda	REUxTPg
+	clc
+	adc	#$10
+	sta	REUxTPg
+PutROt:	ldy	#0
 	rts
-20$:	ldx	#0
-	rts
+
 
 ;*	FlushR(	)
 FlushR:	lda	REUxCPg

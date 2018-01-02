@@ -34,9 +34,10 @@ ResColorScn:	ldw	R1,#COLOR_MATRIX+(40*2)	; scrn color
 	jsr	MoveData
 	rts
 
-DrawMenu:
-	lda	BuffEnable
-	
+DrawMenu:	lda	BuffEnable
+	beq	10$
+	ldb	MnuF0_1,#$06
+	ldw	MnuF0_2,#MnuTxi06
 10$:	lda	#[(Menu00)	; point to first menu
 	sta	$02
 	lda	#](Menu00)
@@ -61,7 +62,7 @@ RecoMenu:	jsr	$8fc2
 
 Menu00:	.byte	$00,$0e	; menu top, bottom
 	.word $0000,$0103	; menu left, right
-	.byte	$00|$08	; VERTICAL menu | # items
+MnuF0_1:	.byte	$00|$07	; VERTICAL menu | # items
 	.word MnuTxt00	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn01	; sub menu pointer
@@ -77,10 +78,10 @@ Menu00:	.byte	$00,$0e	; menu top, bottom
 	.word MnuTxt04	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn05	; sub menu pointer
-	.word MnuTxt05	; menu text pointer
+MnuF0_2:	.word MnuTxt05	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn06	; sub menu pointer
-	.word MnuTxt06	; menu text pointer
+	.word MnuTxi06	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn07	; sub menu pointer
 MnuTxt00:	.byte	27,"geos",0
@@ -89,10 +90,7 @@ MnuTxt02:	.byte	27,"baud rate",0
 MnuTxt03:	.byte	27,"term",0
 MnuTxt04:	.byte	27,"x-modem",0
 MnuTxt05:	.byte	27,"buffer",0
-MnuTxt06:	.byte 27,"exit",0
-
-
-
+MnuTxi06:	.byte 27,"exit",0
 
 
 MnuDyn01:	jsr	BackMenu
@@ -125,7 +123,8 @@ MnuDyn05:	jsr	BackMenu
 MnuDyn06:	jsr	BackMenu
 	lda	BuffEnable
 	beq	10$
-	ldw	R0,
+	ldw	R0,#Menu07a
+	rts
 10$:	ldw	R0,#Menu06
 	rts
 MnuDyn07:	jsr	BackMenu	; exit
@@ -233,23 +232,91 @@ Menu05a:	.byte	$0f,$1d	; menu top, bottom
 	.word MenuAct	; **** action routine here!
 MnuTxa10:	.byte	27,"not connected",27,0
 
-Menu06:	.byte	$0f,$5d	; menu top, bottom
+Menu06:	.byte	$0f,$54	; menu top, bottom
 	.word $00ba,$00f7	; menu left, right
-	.byte	$80|$01	; HORIZONTAL menu | # items
-	.word MnuTxt12	; menu text pointer
+	.byte	$80|$05	; HORIZONTAL menu | # items
+MnuSt06:	.word MnuTxt12	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBufogle	; **** action routine here!
+	.word MnuTxt14	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doExit	; **** action routine here!
-MnuTxt12:	.byte	27,"to deskTop",0
+	.word MnuTxt15	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBufSav	; **** action routine here!
+	.word MnuTxt16	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doExit	; **** action routine here!
+	.word MnuTxt17	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doExit	; **** action routine here!
+MnuTxt12:	.byte	27,"start",0
+MnuTxt14:	.byte	27,"load",0
+MnuTxt15:	.byte	27,"save",0
+MnuTxt16:	.byte	27,"view",0
+MnuTxt17:	.byte	27,"dump",0
+MnuTxt18:	.byte	27,"stop",0
 
-
-Menu07:	.byte	$0f,$1d	; menu top, bottom
-	.word $00d0,$0127	; menu left, right
+Menu07a:	.byte	$0f,$1d	; menu top, bottom
+	.word $00ba,$00f7	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+	.word MnuTxt13	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doExit	; **** action routine here!
+Menu07b:	.byte	$0f,$1d	; menu top, bottom
+	.word $00da,$0118	; menu left, right
 	.byte	$80|$01	; HORIZONTAL menu | # items
 	.word MnuTxt13	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doExit	; **** action routine here!
 MnuTxt13:	.byte	27,"to deskTop",0
 
+
+doBufogle:	jsr	GotoFirstMenu
+	ldw	MnuSt06,#MnuTxt12
+	lda	BufferFlg
+	bne	10$
+	inc	BufferFlg
+	ldw	MnuSt06,#MnuTxt18
+	jsr	CreatRW
+	rts
+10$:	ldb	BufferFlg,#0
+	rts
+
+
+
+doBufSav:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	jsr	OpenRR
+	beq	10$
+	ldw	A2,#BufSavNo
+	jsr	CNCLBox
+	jmp	XferCncl	; we're done.
+10$:	ldb	XDnFType,#$01	; BZ:todo -- make seq, or die
+	jsr	DoXDBox
+	beq	20$
+	rts		; cancel already done
+20$:	ldw	A2,#XFilename
+	mvb	XDnFType,A3L
+	jsr	CreatSF
+	cpx	#0
+	beq	30$
+	ldw	A2,#XDnFlTxt
+	jsr	OKBox
+	jmp	XferCncl	; we're done.
+30$:	jsr	GetRByte
+	cpx	#0
+	bne	90$
+	jsr	PutSByte
+	bra	30$
+90$:	lda	XDnFType
+	ora	#$80
+	sta	A2L
+	jsr	ClosSF
+	jmp	XferCncl	; we're done.
+BufSavNo:	.byte	27,"Buffer Empty?!",0
 
 doEchoOn:	lda	#$01
 	sta	flgEcho
@@ -488,5 +555,5 @@ modal1Off:	jsr	FixFont80
 
 
 .ramsect
-BuffEnab:	.block	1
+BuffEnable:	.block	1
 </pre></body></html>

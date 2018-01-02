@@ -353,8 +353,16 @@ DoXDownload:
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
-	ldw	A5,#XFilename
 	ldb	XDnFType,#$02
+	jsr	DoXDBox
+	beq	10$
+	rts
+10$:	lda	txtTop	; first row to clear
+	jsr	ClrTrmScn	; clears the screen
+	ldb	flgDoBg,#0
+	jmp	XDownload
+
+DoXDBox:	ldw	A5,#XFilename
 	ldy	#0
 	tya
 04$:	sta	(A5),y	; clear the filename
@@ -372,7 +380,9 @@ DoXDownload:
 	jsr	DoDlgBox
 	cbi	sysDBData,#$02	;was cancel hit?
 	bne	15$
-14$:	jmp	XferCncl	;back to start
+14$:	jsr	XferCncl	;back to start
+	ldx	#$ff
+	rts
 15$:	cmp	#$06	;change disks
 	bne	16$
 	jsr	FBOXchgd
@@ -386,10 +396,8 @@ DoXDownload:
 	jsr	FBOXcrve
 	cpx	#0
 	bne	05$
-	lda	txtTop	; first row to clear
-	jsr	ClrTrmScn	; clears the screen
-	ldb	flgDoBg,#0
-	jmp	XDownload
+	rts
+
 
 XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	XBufRdPtr,#BACK_SCR_BASE

@@ -10,7 +10,9 @@
 curWidth = $8807
 
 .psect
-StartTelnet:	jsr	scnSetup
+StartTelnet:	jsr	CreatRW
+	stx	BuffEnable
+	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
 	ldb	flgANSI,#1
@@ -136,7 +138,12 @@ keyRestore:	sei
 KeyPRtn:	lda	keyData
 	bne	10$
 	rts
-10$:	ldx	flgEcho
+10$:	ldx	BufferFlg
+	beq	12$
+	pha
+	jsr	PutRByte
+	pla
+12$:	ldx	flgEcho
 	beq	50$
 	cmp	#$0d
 	bne	15$
