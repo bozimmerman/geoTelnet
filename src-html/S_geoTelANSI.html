@@ -321,9 +321,9 @@ Ansi_J:	lda	ansiNBuf
 	bne	20$
 10$:	jsr	AnsiDC2E	; Erase cursor->End of screen
 	mvb	txtXY+2,R2L
-	mvb	txtXY+2,R2H
+	mvb	txtBot,R2H
 	adb	curHeight,R2L
-	adb	curHeight,R2H
+	dec	R2L
 	mvw	txtLeft,R3
 	mvw	txtRight,R4
 	jsr	Rectangle
@@ -362,6 +362,7 @@ AnsiDC2E:	lda	#0
 	mvb	txtXY+2,R2L
 	mvb	txtXY+2,R2H
 	adb	curHeight,R2H
+	dec	R2H
 	mvw	txtXY,R3
 	mvw	txtRight,R4
 	jmp	Rectangle
@@ -414,6 +415,7 @@ AnsiDFL:	jsr	ClrColLn
 	mvb	txtXY+2,R2L
 	mvb	txtXY+2,R2H
 	adb	curHeight,R2H
+	dec	R2H
 	mvw	txtLeft,R3
 	mvw	txtRight,R4
 	jmp	Rectangle

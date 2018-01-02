@@ -96,6 +96,7 @@ mdmSetup:	ldb	A2L,#$00;>CLBuf	; input buffer
 	ldb	A2H,#$01;CLBfLen	; input buffer len pages
 	ldb	A3L,#$01	; 1200 baud
 	ldb	A3H,#$80	; RTSCTS Flow Control!
+	ldb	OutBuf,#0
 	jsr	ComInit
 	jsr	XMOPause
 	ldw	R0,#mdmInitStr
@@ -176,14 +177,6 @@ KeyComPut:	ldx	flgANSI
 	pla
 	rts
 KeyACt:	.byte 16,65,17,66,8,68,30,67,0,0
-
-ComPutS:	ldy	#0	; *
-10$:	lda	(R0),y
-	beq	20$
-	jsr	ComSPut
-	iny
-	bne	10$
-20$:	rts
 
 DrawStr:	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
@@ -415,6 +408,7 @@ Tel1Ch:	.byte 251, <Tel2Ch, >Tel2Ch; WILL
 Tel2Ch:	.byte	24, <TelWi_TT, >TelWi_TT + $80; TERMTYPE
 	.byte	1, <TelWi_Echo, >TelWi_Echo + $80; ECHO
 	.byte	3, <TelWi_SGA, >TelWi_SGA + $80; Supp go ah
+	.byte	32, <TelWi_SO, >TelWi_SO + $80; Speed opt
 	.byte	$80, <TelWi_, >TelWi_	 + $80; everything else
 	.byte	0,0,0
 	; WONT
@@ -425,6 +419,7 @@ Tel4Ch:	.byte	24, <TelDo_TT, >TelDo_TT + $80; TERMTYPE
 	.byte	1, <TelDo_Echo, >TelDo_Echo + $80; ECHO
 	.byte	31, <TelDo_NAWS, >TelDo_NAWS + $80; NAWS
 	.byte	3, <TelDo_SGA, >TelDo_SGA + $80; Supp go ah
+	.byte	32, <TelDo_SO, >TelDo_SO + $80; Speed opt
 	.byte	$80, <TelDo_, >TelDo_	 + $80; everything else
 	.byte	0,0,0
 	; DONT
@@ -451,41 +446,48 @@ TelSB_Do:	lda	#$00
 	cmp	#24
 	bne	10$
 	ldy	#0
-15$:	lda	TelSBttStr,y
-	jsr	ComSPut
+05$:	lda	TelSBttStr,y
+	jsr	QOutC
 	iny
 	cpy	#10
+	bcc	05$
+	jmp	TelnOut
+10$:	cmp	#32
+	bne	20$
+	ldy	#0
+15$:	lda	TelSBsoStr,y
+	jsr	QOutC
+	iny
+	cpy	#15
 	bcc	15$
 	jmp	TelnOut
-10$:
-	jmp	TelnOut
-TelSBTTStr:	.byte	255,250,24,0,'a','n','s','i',255,240,0
+20$:	jmp	TelnOut
+TelSBttStr:	.byte	255,250,24,0,'a','n','s','i',255,240,0
+TelSBsoStr:	.byte	255,250,32,0,'1','2','0','0',44,'1','2','0','0',255,250,0
 
 
 
 TelDo_NAWS:	ldy	#0
 10$:	lda	TelWiNaStr,y
-	jsr	ComSPut
+	jsr	QOutC
 	iny
 	cpy	#12
 	bcc	10$
 	jmp	TelnOut
 TelWiNaStr:	.byte	255,251,31,255,250,31,0,80,0,23,255,240,0
 
-TelWi_TT:	ldw	R0,#TelDoTTStr
-	jsr	ComPutS
+TelWi_SO:
+TelWi_SGA:
+TelWi_TT:	mvb TelnCC+1,TelDoAAStr+2
+	ldw	R0,#TelDoAAStr
+	jsr	QOutStr
 	jmp	TelnOut
-TelDoTTStr:	.byte	255,253,24,0
-
-TelWi_SGA:	ldw	R0,#TelDoSGStr
-	jsr	ComPutS
-	jmp	TelnOut
-TelDoSGStr:	.byte	255,253,3,0
+TelDoAAStr:	.byte	255,253,24,0
 
 TelWi_:	lda	TelnCC+1
 	sta	TelDotStr+2
 	ldw	R0,#TelDotStr
-	jsr	ComPutS
+	jsr	QOutStr
 	jmp	TelnOut
 TelDotStr:	.byte	255,254,0,0
 
@@ -495,24 +497,21 @@ TelDn_Echo:	ldb	TelWDEcStr+1,252
 TelWD_Echo:	ldb	flgEcho,#1
 	jsr	FixEcho
 	ldw	R0,#TelWDEcStr
-	jsr	ComPutS
+	jsr	QOutStr
 	jmp	TelnOut
 TelWDEcStr:	.byte	255,253,1,0
 
-TelDo_TT:	ldw	R0,#TelWiTTStr
-	jsr	ComPutS
+TelDo_SGA:
+TelDo_SO:
+TelDo_TT:	mvb TelnCC+1,TelWiAAStr+2
+	ldw	R0,#TelWiAAStr
+	jsr	QOutStr
 	jmp	TelnOut
-TelWiTTStr:	.byte	255,251,24,0
+TelWiAAStr:	.byte	255,251,24,0
 
-TelDo_SGA:	ldw	R0,#TelWiSGStr
-	jsr	ComPutS
-	jmp	TelnOut
-TelWiSGStr:	.byte	255,251,3,0
-
-TelDo_:	lda	TelnCC+1
-	sta	TelWotStr+2
+TelDo_:	mvb	TelnCC+1, TelWotStr+2
 	ldw	R0,#TelWotStr
-	jsr	ComPutS
+	jsr	QOutStr
 	jmp	TelnOut
 TelWotStr:	.byte	255,252,0,0
 
@@ -522,8 +521,47 @@ TelDo_Echo:	ldb	TelWDEcStr+1,#251
 TelW2_Echo:	ldb	flgEcho,#0
 	jsr	FixEcho
 	ldw	R0,#TelWDEcStr
-	jsr	ComPutS
+	jsr	QOutStr
 	jmp	TelnOut
+
+
+ComPutS:	ldy	#0	; *
+10$:	lda	(R0),y
+	beq	20$
+	jsr	ComSPut
+	iny
+	bne	10$
+20$:	rts
+
+QOutC:	sty	QOutC2+1
+	inc	OutBuf
+	ldy	OutBuf
+	sta	OutBuf,y
+QOutC2:	ldy	#0
+	rts
+
+QOutStr:	sty	QOutStr2+1
+	ldy	#0	
+QOutStr1:	lda	(R0),y
+	beq	QOutStr2
+	jsr	QOutC
+	iny
+	bne	QOutStr1
+QOutStr2:	ldy	#0	
+	rts
+
+QFlush:	lda	OutBuf
+	bne	10$
+	rts
+10$:	ldy	#1
+20$:	lda	OutBuf,y
+	jsr	ComSPut
+	iny
+	cpy	OutBuf
+	bcc	20$
+	ldb	OutBuf,#0
+	rts
+	
 
 
 MainLp:	mvb	rrate,A5L
@@ -538,6 +576,7 @@ MainLp2:	jsr	ComGet
 	jsr	PromptOn
 10$:	mvb	R1H,txtXY+2
 	mvw	R11,txtXY
+	jsr	QFlush
 	rts
 20$:	tax
 	lda	$01
@@ -577,6 +616,7 @@ baseColor:	.block	1
 curColor:	.block	1
 colorLPtr:	.block	2
 colorBBuf:	.block	$03e9-(40*2)
+outBuf:	.block	256
 ; that's all folks!
 
 </pre></body></html>
