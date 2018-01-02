@@ -371,18 +371,12 @@ CLL2BSet:	sta CLL2Baud
 	asl a
 	asl a
 	tay 
-	jsr CLL2_0N
 	ldw A0,#CLL2NBVals
-	cbi 65532,#61
-	beq 12$
-	lda 678
-	beq 19$
-	ldw A0,#CLL2PBVals
-	bra 19$
-12$:	lda 678
+	jsr IsNTSC
 	beq 19$
 	ldw A0,#CLL2PBVals		
-19$:	ldx #$00
+19$:	jsr CLL2_0N
+	ldx #$00
 20$:	lda (A0),y
 	sta CLL2WTime,x
 	sta $dd04,x
@@ -392,6 +386,49 @@ CLL2BSet:	sta CLL2Baud
 	bne 20$
 	jsr CLL2_0FF
 	rts 
+
+;*****************************
+;* IsNTSC	Is the computer NTSC?
+;* Outputs:
+;*	duh
+;******************************
+IsNTSC:	lda #$00
+	beq 10$
+	cmp #$01
+	rts
+10$:	lda $01
+	pha
+	sei
+	lda #$35
+	sta $01
+	lda $d011
+	pha
+	mvw $fffa,CLL2nmsv
+	ldw $fffa,#CLL2rti
+20$:	lda $d012
+	bne 20$
+	ldb $d012,#$37
+	ldb $d011,#$9b
+	ldb $d019,#$01
+30$:	lda $d011
+	bpl 30$
+40$:	lda $d011
+	bmi 40$
+	lda $d019
+	and #$01
+	sta $d019
+	inc IsNTSC+1	; is NTSC
+	cmp #$00
+	beq 50$
+	inc IsNTSC+1	; is PAL
+50$:	pla
+	sta $d011
+	mvw CLL2nmsv,$fffa
+	pla
+	sta $01
+	cli
+	jmp IsNTSC
+CLL2rti:	rti
 
 ;*****************************
 ;* ComGet	Read RS-232 Byte
@@ -433,5 +470,6 @@ CLL2PBVals:	.byte $00,$0d,$10,$0d,$34,$03,$42,$03
 
 
 .ramsect
+CLL2nmsv:	.block 2
 CLL2Buff:	.block 256
 </pre></body></html>

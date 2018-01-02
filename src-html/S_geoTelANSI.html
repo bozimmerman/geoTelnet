@@ -453,9 +453,9 @@ AnsiM2:	ldx	txtXY+2
 	jmp	AnsiM2
 30$:	jmp	AnsiOut
 
-AnsDLL:	ldy	#0
+AnsiDLL:	ldy	#0
 	lda	baseColor
-10$:	sta	(COLOR_MATRIX+960),y
+10$:	sta	COLOR_MATRIX+960,y
 	iny
 	cpy	#40
 	bcc	10$

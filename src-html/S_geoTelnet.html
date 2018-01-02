@@ -92,11 +92,12 @@ AboutStrs:	.byte	24,"      geoTelnet beta1",0
 	.byte	24,"    By Bo Zimmerman",0
 	.byte	24,"      bo@zimmers.net",0
 
-mdmSetup:	ldb	A2L,#>CLBuf	; input buffer
-	ldb	A2H,#CLBfLen	; input buffer len pages
+mdmSetup:	ldb	A2L,#$00;>CLBuf	; input buffer
+	ldb	A2H,#$01;CLBfLen	; input buffer len pages
 	ldb	A3L,#$01	; 1200 baud
 	ldb	A3H,#$80	; RTSCTS Flow Control!
 	jsr	ComInit
+	jsr	XMOPause
 	ldw	R0,#mdmInitStr
 	jsr	ComPutS
 	rts
@@ -216,11 +217,17 @@ SPutChar:	cmp	#27
 	beq	11$
 	pla
 	jmp	AnsiCont
-11$:	pla
+11$:	lda	telnState
+	beq	13$
+	pla
+12$:	jmp	TelnCont
+13$:	pla
+	cmp	#$ff
+	beq	12$
 	cmp	#$0d
-	bne	13$
+	bne	15$
 	jmp	PutLine
-13$:	cmp	#$08
+15$:	cmp	#$08
 	bne	20$
 	jmp	PutDel
 20$:	cmp	#$20
@@ -360,6 +367,12 @@ CrsrStLn:	mvw	txtLeft,txtXY
 	rts
 
 
+TelnCont:	pha
+	; **TODO  telnState
+	pla
+	rts
+
+
 MainLp:	mvb	rrate,A5L
 	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
@@ -390,14 +403,13 @@ MainLp2:	jsr	ComGet
 	rts
 
 
-CLBfLen 	= 4		; buffer because not 0 aligned
-CLBuf	= $5c00
 txtTop:	.byte	$10
 txtBot:	.byte	199
 txtLeft:	.word	0
 txtRight:	.word	319
 txtBEnd:	.byte	199
 txtREnd:	.word	312
+telnState:	.byte	0
 
 .ramsect
 rrate:	.block	1
