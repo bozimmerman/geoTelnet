@@ -82,7 +82,10 @@ ComInit:	jsr CLL2xxRb
 	sta $fffa
 	lda #>CLL2NMI1
 	sta $fffb
-	ldy #$03
+	jsr Check128
+	bne 30$
+	jsr CLL2Bnkw
+30$:	ldy #$03
 50$:	lda CLL2WTime,y
 	sta $dd04,y
 	dey 
@@ -120,7 +123,10 @@ ComUninst: 	sei
 	sta $fffa
 	lda CLL2NMIv+2
 	sta $fffb
-	lda #$7f
+	jsr Check128
+	bne 30$
+	jsr CLL2Bnkt
+30$:	lda #$7f
 	sta $dd0d
 	lda $dd00
 	ora #$04
@@ -150,7 +156,10 @@ ComReInit:	sei
 	sta $fffa
 	lda CLL2NMIv+2
 	sta $fffb
-	plb BANK_REG
+	jsr Check128
+	bne 30$
+	jsr CLL2Bnkw
+30$:	plb BANK_REG
 	cli
 	mvb	CLL2Baud,A3L
 	mvb	CLL2FloC,A3H
@@ -329,6 +338,10 @@ CLL2NMI_:	lda #$02
 CLL2NMxt:	plb BANK_REG
 	pla 
 	rti
+CLL2BnkN:	ldb $ff00,#$3e
+	plw $fffa
+	ldb $ff00,#$7e
+	rts 
 CLL2NMIv:	jmp $0000	;$fe56
 
 
@@ -504,11 +517,18 @@ ComFloff:	pha
 ;**** c128 only -- copy NMI routine to bank 1, called from ram bank 0
 CLL2Bnkr:	ldw R0,#CLL2NMI1
 	ldw R1,#CLL2NMI1
-	ldw R2,#(CLL2NMIv + CLL2NMI1 + 10)
+	ldw R2,#(CLL2NMIv - CLL2NMI1 + 10)
 	ldb R3L,#$01
 	ldb R3H,#$00
 	jsr $c2e3	; MoveBData
 	rts
+
+CLL2Bnkw:	phw $fffa
+	jmp CLL2BnkN
+
+CLL2Bnkt:	phw CLL2NMIv+1
+	jmp CLL2BnkN
+
 
 CLL2Busy:	.byte $01 ; busy flag
 CLL2BfRdx:	.byte $00
