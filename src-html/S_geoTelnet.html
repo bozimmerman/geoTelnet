@@ -305,7 +305,7 @@ DrawLF:	cpb	R1H,txtBEnd
 	jsr	MoveData
 	ldw	R0,#COLOR_MATRIX+(3*40)
 	ldw	R1,#COLOR_MATRIX+(2*40)
-	ldw	R2,#$03e7-(3*40)
+	ldw	R2,#$03e8-(3*40)
 	jsr	MoveData
 	ldw	R1,#SCREEN_BASE+$1f3f-(8*40)
 	ldw	R0,#8*40
