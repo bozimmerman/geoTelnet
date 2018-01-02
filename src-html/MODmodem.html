@@ -1,10 +1,14 @@
 <!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
-;BANK_REG = $ff00
-;BANK_vIO = $7e
-;BANK_vSTD = $7e
+.if MODMODEM = 128
+BANK_REG = $ff00
+BANK_vIO = $7e
+BANK_vSTD = $7e
+.endif
+.if MODMODEM = 64
 BANK_REG = $01
 BANK_vIO = $35
 BANK_vSTD = $30
+.endif
 
 .noeqin
 .include	GEOSequates
@@ -71,10 +75,10 @@ ComInit:	jsr CLL2xxRb
 	ldb BANK_REG, #BANK_vIO
 	lda CLL2NMIv+2
 	bne 20$
-	jsr Check128
-	bne 10$
+.if MODMODEM = 128
 	jsr CLL2Bnkr
-10$:	lda $fffa
+.endif
+	lda $fffa
 	sta CLL2NMIv+1
 	lda $fffb
 	sta CLL2NMIv+2
@@ -82,10 +86,10 @@ ComInit:	jsr CLL2xxRb
 	sta $fffa
 	lda #>CLL2NMI1
 	sta $fffb
-	jsr Check128
-	bne 30$
+.if MODMODEM = 128
 	jsr CLL2Bnkw
-30$:	ldy #$03
+.endif
+	ldy #$03
 50$:	lda CLL2WTime,y
 	sta $dd04,y
 	dey 
@@ -123,10 +127,10 @@ ComUninst: 	sei
 	sta $fffa
 	lda CLL2NMIv+2
 	sta $fffb
-	jsr Check128
-	bne 30$
-	jsr CLL2Bnkt
-30$:	lda #$7f
+.if MODMODEM = 128
+	jsr CLL2BnkU
+.endif
+	lda #$7f
 	sta $dd0d
 	lda $dd00
 	ora #$04
@@ -156,10 +160,11 @@ ComReInit:	sei
 	sta $fffa
 	lda CLL2NMIv+2
 	sta $fffb
-	jsr Check128
-	bne 30$
-	jsr CLL2Bnkw
-30$:	plb BANK_REG
+.if MODMODEM = 128
+	jsr CLL2Bnkr
+	jsr CLL2BnkU
+.endif
+	plb BANK_REG
 	cli
 	mvb	CLL2Baud,A3L
 	mvb	CLL2FloC,A3H
@@ -434,12 +439,6 @@ IsNTSC:	lda #$00
 	jmp IsNTSC
 CLL2rti:	rti
 
-Check128:	lda #$12
-	cmp $c00f
-	bpl 10$
-	lda $c013
-10$:	cmp #$80
-	rts
 
 ;*****************************
 ;* ComGet	Read RS-232 Byte
@@ -515,6 +514,8 @@ ComFloff:	pha
 
 
 ;**** c128 only -- copy NMI routine to bank 1, called from ram bank 0
+.if MODMODEM = 128
+
 CLL2Bnkr:	ldw R0,#CLL2NMI1
 	ldw R1,#CLL2NMI1
 	ldw R2,#(CLL2NMIv - CLL2NMI1 + 10)
@@ -526,9 +527,10 @@ CLL2Bnkr:	ldw R0,#CLL2NMI1
 CLL2Bnkw:	phw $fffa
 	jmp CLL2BnkN
 
-CLL2Bnkt:	phw CLL2NMIv+1
+CLL2BnkU:	phw CLL2NMIv+1
 	jmp CLL2BnkN
 
+.endif
 
 CLL2Busy:	.byte $01 ; busy flag
 CLL2BfRdx:	.byte $00

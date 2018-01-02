@@ -22,10 +22,21 @@ Main:	jsr	i_InitVPrg
 	cpx	#0
 	beq	10$
 	jmp	EnterDeskTop
-10$:	jsr	i_LdMod
+10$:	jsr	Check128
+	beq	20$
+	jsr	i_LdMod
 	.byte	1
 	jmp	VPRGbase
+20$:	jsr	i_LdMod
+	.byte	2
+	jmp	VPRGbase
 
+Check128:	lda #$12
+	cmp $c00f
+	bpl 10$
+	lda $c013
+10$:	cmp #$80
+	rts
 PermName:	.byte "geoTelnet   1.0 ",0
 
 
