@@ -14,6 +14,21 @@
 ;*     Requires MODmodem or compatible library
 ;* 
 ;* Functions:
+;* 	XMOrcvChk(	.word	Vector - Receive a single byte in .a
+;*		.word	Vector - Received a good block
+;*		.word	Vector - Received a bad block
+;*		.word	Vector - Abort check (carry set = abort)
+;*		) .x = 0 no error
+;* 	XMOrcvCrc(	.word	Vector - Receive a single byte in .a
+;*		.word	Vector - Received a good block
+;*		.word	Vector - Received a bad block
+;*		.word	Vector - Abort check (carry set = abort)
+;*		) .x = 0 no error
+;* 	XMOsend(	.word	Vector - Ensure 128 bytes available
+;*		.word	Vector - Send a single byte in .a, .x=no more
+;*		.word	Vector - Sent a bad block
+;*		.word	Vector - Abort Check (carry set = abort)
+;*		) .x = 0 no error
 ;*
 ;*     * = includes i_Function call, and returns
 ;*            status in the .x register

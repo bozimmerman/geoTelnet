@@ -14,6 +14,20 @@
 ;*     as traditional or internet modems.
 ;* 
 ;* Functions:
+;*	ComInit(	.byte	Input Buffer Addr Page (unimpl)
+;*		.byte	Size of A2 Buf in Pages (unimpl)
+;*		.byte	Baud Rate Code
+;*		.byte	Flow Control Code (unimpl) )
+;*	ComUninst(	)
+;*	ComReInit(	)
+;*	ComDisable(	)
+;*	ComEnable(	)
+;*	ComOnline(	) .ne = online, .eq = not online
+;*	ComSend(	.a byte to send )
+;*	ComSPut(	.a byte to send )
+;*	BaudSet(	.byte	baud rate code )
+;*	IsNTSC(	) .ne = pal, .eq = ntsc
+;*	ComGet(	) .a byte, .cc = byte, .cs = nada
 ;*
 ;*     * = includes i_Function call, and returns
 ;*            status in the .x register
@@ -125,10 +139,6 @@ CLL2_0N:	pha
 ;********************************
 ;* ComReInit	Re-Initialize RS-232 system
 ;* Inputs:
-;*	A2L Input Buffer Addr Page (unimpl)
-;*	A2H Size of A2 Buf in Pages (unimpl)
-;*	A3L Baud Rate Code
-;*	A3H Flow Control Code (unimpl)
 ;********************************
 
 ComReInit:	sei 
