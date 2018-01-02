@@ -13,13 +13,13 @@
 	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
-	jsr	mdmSetup
+	;jsr	mdmSetup	; ***BZ:FIX!!
 	jsr	FixBaud
 	jsr	keySetup
 	rts
 CleanExit:	jsr	PromptOff
 	jsr	keyRestore
-	jsr	mdmDone
+	;jsr	mdmDone	; ***BZ:FIX!!
 	jsr	SavColorScn	; restores origColor
 	jmp	EnterDeskTop
 
@@ -89,7 +89,8 @@ mdmInitStr:	.byte 13,"  atze0v1x1f0q0r0&p0i0",13,0
 mdmDoneStr:	.byte 13,"  atzb1200",13,0
 
 
-ComPutS:	ldy	#0
+ComPutS:	rts		; ***BZ:FIX!!
+	ldy	#0
 10$:	lda	(R0),y
 	beq	20$
 	jsr	ComSPut
@@ -131,7 +132,8 @@ KeyPRtn:	lda	keyData
 	jsr	SafePutC
 	pla
 30$:	pha
-	jsr	ComSPut	; send to modem
+	;jsr	ComSPut	; **BZ:FIXME!!!
+	; send to modem
 	pla
 	cmp	#3	; !
 	bne	20$	; *** DELME LATER

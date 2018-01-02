@@ -69,7 +69,7 @@ QConnPhb:	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
-10$:	mvw	VPRGaNam,R0
+10$:	ldw	R0,#VPRGaNam
 	jsr	OpenRecordFile
 	cpx	#0
 	bne	20$
@@ -211,8 +211,8 @@ MkNewHost:
 	bra	21$
 22$:	inw	R0
 	ldw	R1,#NewHost
-23$:	lda	(R0),y
-	sta	(R1),y
+23$:	lda	(R1),y
+	sta	(R0),y
 	beq	25$
 	inw	R0
 	inw	R1
@@ -300,17 +300,25 @@ NextPhBlk:	ldw	R0,#0
 	lda	PhPage
 	jsr	PointRecord
 	cpx	#0
-	beq	10$
-09$:	rts
+	bne	09$
+	cpy	#0	; y=0 means ok, but no data
+	bne	10$
+08$:	mvb	curRecord,usedRecords
+	dec	curRecord
+09$:	dec	PhPage
+	ldx	#1
+	rts
 10$:	ldw	R2,#$00fe
 	ldw	R7,#PhPgBlk
 	jsr	ReadRecord
+	cpx	#11	; buffer overflow is OK!
+	beq	NextPhBlk
 	cpx	#0
-	bne	09$
-20$:	cbi	PhPgBlk,#$50	; 'P'
-	bne	09$
+	bne	NextPhBlk
+	cbi	PhPgBlk,#$50	; 'P'
+	bne	NextPhBlk
 	cbi	PhPgBlk+1,#$48	; 'H'
-	bne	09$
+	bne	NextPhBlk
 	mvb	curRecord,PhPage
 	ldb	PhPage+1,#2
 	jsr	PhMkR0
