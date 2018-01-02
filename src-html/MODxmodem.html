@@ -354,7 +354,7 @@ XMOChkTm:	ldb	XMOClock,#0
 10$:	lda	$dc08
 	pla
 	sta	$01
-	cbi	XMOClock,#3
+	cbi	XMOChkC,#3
 	bcs	XMOBadTm
 	rts
 XMOBadTm:	inc	XMOTmOuts

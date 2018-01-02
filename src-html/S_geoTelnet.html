@@ -9,14 +9,14 @@
 
 
 .psect
-
-	jsr	scnSetup
+StartPrg:	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
 	jsr	mdmSetup	; *
 	jsr	FixBaud
 	jsr	keySetup
 	rts
+
 CleanExit:	jsr	PromptOff
 	jsr	keyRestore
 	jsr	mdmDone
@@ -124,6 +124,7 @@ keyRestore:	sei
 	mvw savKeyVec,keyVector
 	cli
 	jsr	PromptOff
+	ldb	$84b4,#0	; why didn't promptoff do this?
 	rts
 
 KeyPRtn:	lda	keyData
