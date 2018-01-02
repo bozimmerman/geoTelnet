@@ -42,6 +42,16 @@ DrawMenu:	lda	#[(Menu00)	; point to first menu
 	jmp	DoMenu	; DoMenu
 MenuAct:	jmp	GotoFirstMenu	; GotoFirstMenu
 
+BackMenu:	jsr	ScreenSafe
+	jsr	SavColorScn
+	mvw	RecoverVector, RecoMenu+1
+	ldw	RecoverVector,#RecoMenu
+	rts
+
+RecoMenu:	jsr	$8fc2
+	jsr	ResColorScn
+	mvw	RecoMenu+1,RecoverVector
+	rts
 
 
 Menu00:	.byte	$00,$0e	; menu top, bottom
@@ -72,34 +82,34 @@ MnuTxt03:	.byte	27,"term",0
 MnuTxt04:	.byte	27,"x-modem",0
 MnuTxt05:	.byte 27,"exit",0
 
-MnuDyn01:	jsr	ScreenSafe
+MnuDyn01:	jsr	BackMenu
 	ldw	R0,#DAABMenu
 	rts
-MnuDyn02:	jsr	ScreenSafe
+MnuDyn02:	jsr	BackMenu
 	jsr	ComOnline
 	bne	10$
 	ldw	R0,#Menu02
 	rts
 10$:	ldw	R0,#Menu02a
 	rts
-MnuDyn03:	jsr	ScreenSafe
+MnuDyn03:	jsr	BackMenu
 	jsr	ComOnline
 	beq	10$
 	ldw	R0,#Menu03a
 	rts
 10$:	ldw	R0,#Menu03
 	rts
-MnuDyn04:	jsr	ScreenSafe
+MnuDyn04:	jsr	BackMenu
 	ldw	R0,#Menu04
 	rts
-MnuDyn05:	jsr	ScreenSafe
+MnuDyn05:	jsr	BackMenu
 	jsr	ComOnline
 	beq	10$
 	ldw	R0,#Menu05
 	rts
 10$:	ldw	R0,#Menu05a
 	rts
-MnuDyn06:	jsr	ScreenSafe
+MnuDyn06:	jsr	BackMenu
 	ldw	R0,#Menu06
 	rts
 
@@ -177,10 +187,10 @@ Menu04:	.byte	$0f,$47	; menu top, bottom
 	.word MnuTxt41	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doASCIIOn	; **** action routine here!
-MnuTxt0e:	.byte	27,"echo on",27,0
-MnuTxt0f:	.byte	27,"echo off",27,0
-MnuTxt40:	.byte	27,"ANSI term",27,0
-MnuTxt41:	.byte	27,"ASCII term",27,0
+MnuTxt0e:	.byte	27," echo on",27,0
+MnuTxt0f:	.byte	27," echo off",27,0
+MnuTxt40:	.byte	27," ANSI term",27,0
+MnuTxt41:	.byte	27," ASCII term",27,0
 
 
 
@@ -223,16 +233,16 @@ doEchoOff:	lda	#$00
 	jsr	FixEcho
 	jmp	GotoFirstMenu
 
-FixEcho:	lda	#27
-	sta	MnuTxt0e
-	sta	MnuTxt0f
+FixEcho:	lda	#32
+	sta	MnuTxt0e+1
+	sta	MnuTxt0f+1
 	lda	flgEcho
 	beq	10$
-	lda	#26
-	sta	MnuTxt0e
+	lda	#42
+	sta	MnuTxt0e+1
 	rts
-10$:	lda	#26
-	sta	MnuTxt0f
+10$:	lda	#42
+	sta	MnuTxt0f+1
 	rts
 
 
@@ -248,16 +258,16 @@ doASCIIOn:	lda	#$00
 	jsr	FixATerm
 	jmp	GotoFirstMenu
 
-FixATerm:	lda	#27
-	sta	MnuTxt40
-	sta	MnuTxt41
+FixATerm:	lda	#32
+	sta	MnuTxt40+1
+	sta	MnuTxt41+1
 	lda	flgANSI
 	beq	10$
-	lda	#26
-	sta	MnuTxt40
+	lda	#42
+	sta	MnuTxt40+1
 	rts
-10$:	lda	#26
-	sta	MnuTxt41
+10$:	lda	#42
+	sta	MnuTxt41+1
 	rts
 
 
@@ -286,11 +296,11 @@ doBaud:	cmp	CLL2Baud
 	beq	30$
 	cmp	#27
 	beq	30$
-	sta	BaudCmd+4,y
+	sta	BaudCmd+5,y
 	iny
 	bne	20$
 30$:	lda	#13
-	sta	BaudCmd+4,y
+	sta	BaudCmd+5,y
 	jsr	keyRestore
 	jsr	CLL2xxRb
 	ldw	R0,#BaudCmd
@@ -317,10 +327,11 @@ GetBaudPtr:	asl	a
 DAinit:	jsr	ScreenSafe
 	jsr	SavColorScn
 	jsr	ComDisable
+	jsr	ComUninst
 	rts
 
 DAdone:	jsr	ResColorScn
-	jsr	ComEnable
+	jsr	ComReInit
 	rts
 
 ;* Baud Cds:	0=300, 1=1200, 2=2400,3=4800

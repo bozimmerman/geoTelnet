@@ -222,9 +222,7 @@ ComEnable:	jsr CLL2_0N
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	;lda	#$10	; **BZ:DELME
-	;rts		; **BZ:DELME
-	lda	$01
+ComOnline:	lda	$01
 	pha
 	lda	#$35
 	sta	$01

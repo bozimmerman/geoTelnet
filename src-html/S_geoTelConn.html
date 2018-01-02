@@ -71,6 +71,7 @@ QCDlgGfx:	jsr	i_GraphicsString	; i_GraphicsString
 QConnPhb:	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
+	jsr	ComDisable
 	jsr	keyRestore
 10$:	ldw	R0,#VPRGaNam
 	jsr	OpenRecordFile
@@ -87,6 +88,7 @@ QConnPhb:	jsr	GotoFirstMenu
 	cmp	#$05
 	beq	50$
 20$:	jsr	CloseRecordFile
+	jsr	ComEnable
 	jsr	keySetup
 	jmp	ResColorScn
 30$:	jsr	NewPhb
@@ -433,7 +435,7 @@ SetSelPhR:	mvw	PhSelRef,A0
 
 OpenPhNm:	jsr	LdSelPhb
 	beq	10$
-	rts
+	bne	30$
 10$:	jsr	SetSelPhR
 	ldy	#0
 15$:	lda	(R0),y	; skip the name
@@ -449,6 +451,7 @@ OpenPhNm:	jsr	LdSelPhb
 	iny
 	bne	25$
 30$:	jsr	CloseRecordFile
+	jsr	ComEnable
 	jsr	QDoConn
 	jsr	keySetup
 	jmp	ResColorScn

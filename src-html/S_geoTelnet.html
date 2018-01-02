@@ -10,7 +10,13 @@
 curWidth = $8807
 
 .psect
-StartPrg:	jsr	scnSetup
+;Main:	jsr	i_InitVPrg
+;	.word PermName
+;	cpx	#0
+;	beq	10$
+;	jmp	EnterDeskTop
+;10$:	nop
+StartTelnet:	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
 	ldb	flgANSI,#1
@@ -19,6 +25,8 @@ StartPrg:	jsr	scnSetup
 	jsr	FixBaud
 	jsr	keySetup
 	rts
+
+PermName:	.byte "geoTelnet   1.0 ",0
 
 CleanExit:	jsr	PromptOff
 	jsr	keyRestore
@@ -245,9 +253,12 @@ colorPtr:	.word COLOR_MATRIX
 	inw	colorPtr
 10$:	inc	flgDoBg
 	cpw	R11,txtRight
-	bcs	DrawLF
+	bcs	DrwCRLF
 	rts
 
+
+DrwCRLF:	jsr	DrawCR
+	jmp	DrawLF
 
 DrawCR:	mvw	txtLeft,R11
 	mvw	colorLPtr,colorPtr
@@ -586,11 +597,24 @@ MainLp2:	jsr	ComGet
 	mvw	R11,stringX
 	mvb	R1H,stringY
 	jsr	PromptOn
-10$:	mvb	R1H,txtXY+2
-	mvw	R11,txtXY
+10$:	lda	A9L
+	bne	11$
+	inc	A9L
+	lda	$dc08
+	sta	A9H
+11$:	cpb	$dc08,A9H
+	beq	19$
+	mvb	$dc08,A9H
+	inc	A9L
+	cbi	A9L,#$03
+	bcc	19$
+	ldb	A9L,#0
 	jsr	QFlush
+19$:	mvb	R1H,txtXY+2
+	mvw	R11,txtXY
 	rts
 20$:	tax
+	ldb	A9L,#0
 	lda	$01
 	pha
 	lda	#$30

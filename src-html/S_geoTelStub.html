@@ -11,9 +11,7 @@ Main:	jsr	i_InitVPrg
 	cpx	#0
 	beq	10$
 	jmp	EnterDeskTop
-10$:	jsr	i_LdMod
-	.byte	1
-	jmp	VPRGbase
+10$:	jmp	VPRGbase
 
 PermName:	.byte "geoTelnet   1.0 ",0
 
