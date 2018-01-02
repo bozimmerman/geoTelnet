@@ -350,7 +350,7 @@ FixBaud:	ldx	#0
 	rts
 
 
-BaudCmd:	.byte	13,"atb2400",13,13,0
+BaudCmd:	.byte	13,10,"atb2400",13,10,13,10,0
 
 
 doExit:	jsr	GotoFirstMenu
@@ -379,7 +379,7 @@ doExit:	jsr	GotoFirstMenu
 	jsr	ComPutS
 	jmp	CleanExit
 
-atbCmd:	.byte	13,"atb1200",13,13,13,13,13,13,0
+atbCmd:	.byte	13,10,"atb1200",13,10,13,10,13,10,13,10,13,10,0
 ExitString:	.byte	24,"Exit to deskTop?",27,0
 DiscString:	.byte	24,"Disconnect and Exit?",27,0
 
@@ -412,7 +412,7 @@ Disconn2:	sta	A4H
 	rts
 
 PlusPlusPlus:	.byte	"+++",0
-athCmd:	.byte	"ath0",13,0
+athCmd:	.byte	"ath0",13,10,0
 
 Pause:	sta	A5L
 	lda	$01

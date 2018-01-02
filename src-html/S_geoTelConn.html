@@ -46,8 +46,8 @@ QDoConn:	mvb	baseColor,curColor
 	jsr	DrawStr
 	rts
 	
-QConnCmd:	.byte	13,"atd",34,0
-QConnRcm:	.byte 34,13,0
+QConnCmd:	.byte	13,10,"atd",34,0
+QConnRcm:	.byte 34,13,10,0
 
 QConnDat:	.byte	$01	; size flag, and shadow pattern
 	.byte	$1f,$64,$36,$00,$14,$01	; dialog box dimensions

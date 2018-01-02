@@ -107,7 +107,7 @@ mdmDone:	jsr	ComDisable
 	jsr	ComUninst
 	rts
 
-mdmInitStr:	.byte 13,"  atze0v1x1f0q0r0&p0i0",13,0
+mdmInitStr:	.byte 13,"  atze0v1x1f0q0r1&p0i0",13,0
 mdmDoneStr:	.byte 13,"  atzb1200",13,0
 
 
@@ -138,7 +138,11 @@ KeyPRtn:	lda	keyData
 	rts
 10$:	ldx	flgEcho
 	beq	50$
-	cmp	#$08
+	cmp	#$0d
+	bne	15$
+	jsr	SafeDraw
+	lda	#$0a
+15$:	cmp	#$08
 	beq	50$
 	cmp	#$1d
 	bne	20$
@@ -219,8 +223,11 @@ DrawChar:	pha
 	beq	12$
 	cmp	#$0d
 	bne	15$
-	jmp	DrawEOL
-15$:	cmp	#$08
+	jmp	DrawCR
+15$:	cmp	#$0a
+	bne	17$
+	jmp	DrawLF
+17$:	cmp	#$08
 	bne	20$
 	jmp	PutDel
 20$:	cmp	#$20
@@ -238,12 +245,14 @@ colorPtr:	.word COLOR_MATRIX
 	inw	colorPtr
 10$:	inc	flgDoBg
 	cpw	R11,txtRight
-	bcs	DrawEOL
+	bcs	DrawLF
 	rts
 
 
-DrawEOL:	ldw	R11,#0
-	adb	curHeight,R1H
+DrawCR:	mvw	txtLeft,R11
+	rts
+
+DrawLF:	adb	curHeight,R1H
 	cpb	R1H,txtBot
 	bcs	10$
 	cwi	colorLPtr,#$8fc0
@@ -463,7 +472,7 @@ TelSB_Do:	lda	#$00
 	jmp	TelnOut
 20$:	jmp	TelnOut
 TelSBttStr:	.byte	255,250,24,0,'a','n','s','i',255,240,0
-TelSBsoStr:	.byte	255,250,32,0,'1','2','0','0',44,'1','2','0','0',255,250,0
+TelSBsoStr:	.byte	255,250,32,0,'1','2','0','0',44,'1','2','0','0',255,240,0
 
 
 
@@ -559,6 +568,7 @@ QFlush:	lda	OutBuf
 	iny
 	cpy	OutBuf
 	bcc	20$
+	beq	20$
 	ldb	OutBuf,#0
 	rts
 	
