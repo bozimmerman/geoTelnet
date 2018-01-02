@@ -26,20 +26,10 @@
 	.word	$3ff	;end address, needed for
 				;desk accessories.
 	.word	Main	;init address of program
-	.byte	"geoTelnet   1.2 ",0,0,0,$00
+	.byte	"geoTelnet   1.3 ",0,0,0,$00
 			;perm. filename 12 chars,
 			;4 char version number,
 			;3 zeroes,
 			;40/80 column flag.
-	.byte	"Bo Zimmerman       ",0
-			;19 character author name
-
-	;end of header section which is checked for accuracy
-	.block	160-117	;skip 43 bytes...
-	.byte	"Telnet for C64Net WiFi Modem. ",13
-	.byte	"http://electronicsisfun.com",13
-	.byte	"http://ctcug.coffeemud.net",13,0
-	.endh
-
-
+	.byte	"Bo Zimmerman   
 </pre></body></html>

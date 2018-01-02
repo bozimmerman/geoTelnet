@@ -259,41 +259,37 @@ Ansi_d_:	lda	ansiNBuf	; Cursor Position Y, 1-based
 	bne	20$
 	jmp	AnsiOut
 
-Ansi_A:	jsr	CrsrUp
+Ansi_A:	ldw	Ansi_Ctine+1,#CrsrUp
+	jmp	Ansi_Crsr
+
+Ansi_B:	ldw	Ansi_Ctine+1,#CrsrDn
+	jmp	Ansi_Crsr
+
+Ansi_C:	ldw	Ansi_Ctine+1,#CrsrRt
+	jmp	Ansi_Crsr
+
+Ansi_D:	ldw	Ansi_Ctine+1,#CrsrLt
+	jmp	Ansi_Crsr
+
+Ansi_Crsr:	lda	ansiNBuf
+	bne	10$
+	ldy	#1
+	sty	ansiNBuf+1
+10$:	ldy	ansiNBuf+1
+Ansi_Ctine:	jsr	CrsrUp
+	dey
+	bne	Ansi_Ctine
 	jmp	AnsiOut
-
-Ansi_B:	jsr	CrsrDn
-	jmp	AnsiOut
-
-Ansi_C:	jsr	CrsrRt
-	jmp	AnsiOut
-
-Ansi_D:	jsr	CrsrLt
-	jmp	AnsiOut
-
-
+	
 
 Ansi_E:	jsr	CrsrStLn	; Cursor down N lines
-	lda	ansiNBuf
-	bne	10$
-	ldy	#1
-	bra	20$
-10$:	ldy	ansiNBuf+1
-20$:	jsr	CrsrDn
-	dey
-	bne	20$
-	jmp	AnsiOut
+	ldw	Ansi_Ctine+1,#CrsrRt
+	jmp	Ansi_Crsr
 
 Ansi_F:	jsr	CrsrStLn	; Cursor back N lines up
-	lda	ansiNBuf
-	bne	10$
-	ldy	#1
-	bra	20$
-10$:	ldy	ansiNBuf+1
-20$:	jsr	CrsrUp
-	dey
-	bne	20$
-	jmp	AnsiOut
+	ldw	Ansi_Ctine+1,#CrsrUp
+	jmp	Ansi_Crsr
+
 
 Ansi_G:	jsr	CrsrStLn	; Move to column N, default 1
 	lda	ansiNBuf
