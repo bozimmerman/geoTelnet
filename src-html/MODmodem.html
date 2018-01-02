@@ -91,21 +91,19 @@ ComUninst: 	sei
 	jsr CLL2_0N
 	lda CLRetNMI+1
 	sta $fffa
-	lda CLRetNMI+2
-	sta $fffb
-	lda #$7f
-	sta $dd0d
-	lda CLRetNMI+1
 	sta $0318
 	lda CLRetNMI+2
+	sta $fffb
 	sta $0319
+	lda #$7f
+	sta $dd0d
 	lda $dd00
 	ora #$04
 	sta $dd00
 	jsr CLL2_0FF
 	cli
 	clc 
-	rts 
+	rts 	
 
 CLL2xxRb:	lda #0
 	sta CLL2BfRdx
@@ -123,6 +121,31 @@ CLL2_0N:	pha
 	sta $01
 	pla
 	rts
+
+;********************************
+;* ComReInit	Re-Initialize RS-232 system
+;* Inputs:
+;*	A2L Input Buffer Addr Page (unimpl)
+;*	A2H Size of A2 Buf in Pages (unimpl)
+;*	A3L Baud Rate Code
+;*	A3H Flow Control Code (unimpl)
+;********************************
+
+ComReInit:	sei 
+	jsr CLL2_0N
+	lda CLRetNMI+1
+	sta $fffa
+	sta $0318
+	lda CLRetNMI+2
+	sta $fffb
+	sta $0319
+	jsr CLL2_0FF
+	cli
+	mvb	CLL2Baud,A3L
+	mvb	CLL2FloC,A3H
+	ldb	A2H,#1
+	ldb	A2L,#0
+	jmp	ComInit
 
 ;************************
 ;* ComDisable	Disable RS-232 system
@@ -189,8 +212,8 @@ ComEnable:	jsr CLL2_0N
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	lda	#0	; **BZ:DELME
-	rts		; **BZ:DELME
+ComOnline:	;lda	#$10	; **BZ:DELME
+	;rts		; **BZ:DELME
 	lda	$01
 	pha
 	lda	#$35

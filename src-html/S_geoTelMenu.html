@@ -95,9 +95,9 @@ MnuDyn04:	jsr	ScreenSafe
 MnuDyn05:	jsr	ScreenSafe
 	jsr	ComOnline
 	beq	10$
-	ldw	R0,#Menu05a
+	ldw	R0,#Menu05
 	rts
-10$:	ldw	R0,#Menu05
+10$:	ldw	R0,#Menu05a
 	rts
 MnuDyn06:	jsr	ScreenSafe
 	ldw	R0,#Menu06

@@ -257,7 +257,7 @@ XMObuild:	jsr	XMOSsVec
 	mvb	XMOCrc+1,XMOBufCrc
 XMOcontSend:	jsr	XMOminFlush
 	ldy	#0
-	sta	XMOBufBit
+	sty	XMOBufBit
 50$:	lda	XMOBuf,y
 	jsr	ComSPut
 	ldy	XMOBufBit
@@ -282,9 +282,11 @@ XMOsendStart:	jsr	XMOReTm
 	beq	50$
 19$:	cbi	XMOErrors,#$0e
 	beq	30$
+	lda	XMOAbort
+	bne	30$
 	lda	XMOClock
 	bne	40$
-	bra	10$
+	beq	10$
 30$:	jmp	XMOXAbort
 32$:	jsr	XMOgosCrc
 	bra	35$

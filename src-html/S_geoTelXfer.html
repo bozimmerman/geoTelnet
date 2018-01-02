@@ -157,10 +157,12 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
+	jsr	ComReInit
 	ldw	R0,#XUpFlTxt
 	jsr	OKBox
 	jmp	keySetup
-10$:	jsr	UseSystemFont
+10$:	jsr	ComReInit	; clean up after OpenSF
+	jsr	UseSystemFont
 	jsr	XUpBox
 	ldw	A2,#XUpFillBuf
 	ldw	A3,#XUpRead
@@ -217,7 +219,8 @@ XUpFillBuf:	jsr	XUpdBox
 	cpx	#0
 	bne	60$
 	inc	XMoreFlg
-60$:	ldx	#0
+60$:	jsr	ComReInit	; clean up after GetSMem
+	ldx	#0
 	rts
 
 
@@ -331,10 +334,12 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
+	jsr	ComReInit	; clean up after OpenSF
 	ldw	R0,#XDnFlTxt
 	jsr	OKBox
 	jmp	keySetup
-10$:	jsr	UseSystemFont
+10$:	jsr	ComReInit	; clean up after OpenSF
+	jsr	UseSystemFont
 	jsr	XDnBox
 	ldw	A2,#XDnRcvByte
 	ldw	A3,#XDnGooBlk
@@ -378,6 +383,7 @@ XDnFlush:	ldw	A2,#BACK_SCR_BASE
 	mvw	XBufWrPtr,A3
 	jsr	PutSMem
 	ldw	XBufWrPtr,#BACK_SCR_BASE
+	jsr	ComReInit	; clean up after PutSMem
 	rts
 
 XDnGooBlk:	avw	#128,XBytesDone
