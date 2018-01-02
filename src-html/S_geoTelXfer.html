@@ -354,6 +354,8 @@ DoXDownload:
 	jsr	ScreenSafe
 	jsr	keyRestore
 	ldb	XDnFType,#$02
+	ldw	FBOXtt0,#FBOXttt
+	ldw	FBOXtt1,#FBOXttt+4
 	jsr	DoXDBox
 	beq	10$
 	rts
@@ -594,10 +596,10 @@ FBOXcbox:	.byte	$80 | $01
 	.word	FBOXgfx
 	.byte	11	;add text
 	.byte	$1e,$40
-	.word	FBOXttt
+FBOXtt0:	.word	FBOXttt
 	.byte	11	;add text
 	.byte	$3d,$40
-	.word	FBOXttt+4
+FBOXtt1:	.word	FBOXttt+4
 	.byte	$02,$10,$47	;Cancel icon
 	.byte	17
 	.word	FBOXclk
@@ -606,10 +608,12 @@ FBOXnod1:	.byte	18	;drive icon
 	.word	FBOXdcn2
 FBOXnod2:	.byte	$06,$02,$47	;DISK icon
 	.byte	0	;end of defintion
+
 FBOXdcn2:	.word	FBOXdmag	;graphic location
 	.word	0	;leave this at 0
 	.byte	$06,$10	;width, set below
 	.word	FBOXswdv	;location of action routine
+
 FBOXgfx:	.byte	5,0	; pattern 0
 	.byte	1,83,0,88	; movepento
 	.byte	3,92,0,96	; prg recto
@@ -620,10 +624,9 @@ XPRGgfx:	.byte	1,83,0,88	; movepento
 	.byte	3,92,0,96	; prg recto
 XSEQgfx:	.byte	1,115,0,88	; movepento
 	.byte	7,123,0,96	; seq recto
-	.byte	0
+FBOXgfnx:	.byte	0
 FBOXttt:	.byte	"PRG",0,"SEQ",0
-
-
+FBOXtt2:	.byte	"ascii",0,"petscii",0
 
 FBOXclk:	lda	mouseData
 	beq	10$

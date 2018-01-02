@@ -90,8 +90,9 @@ REUxVal:	ldx	#0
 	lda	ramExpSize
 	bne	10$
 	ldb	REUxVal+1,#$ff
-	bra	20$
-10$:	sta	REUxBnk
+	bne	20$
+10$:	lda	#0	; **REALLY?! BZ:DELME???
+	sta	REUxBnk
 	lda	#0
 	jsr	REUxFtch
 20$:	ldb	REUxVal+2,#$60
@@ -101,10 +102,16 @@ REUxVal:	ldx	#0
 
 REUxFtch:	pha
 	mvb	R1H,REUxFtc1+1
+	ldw	R0,#REUxBlk
+	ldb	R1L,#$00
+	sta	R2L
+	ldb	R2H,#$01
+	.byte	$a9	; lda immediate
+REUxBnk:	.byte	7
+	sta	R3L
 	.byte	$a9	; lda immediate
 REUxCdty:	.byte	0	; curr pg dirty flag
 	beq	10$
-	jsr	REUxROp
 	lda	REUxCPg
 	sta	R1H
 	jsr	StashRAM
@@ -112,19 +119,11 @@ REUxCdty:	.byte	0	; curr pg dirty flag
 10$:	pla
 	sta	REUxCPg
 	sta	R1H
-	jsr	REUxROp
 	jsr	FetchRAM	; finish the fetch
 REUxFtc1:	lda	#0
 	sta	R1H
 	rts
 
-REUxROp:	ldw	R0,#REUxBlk
-	ldb	R1L,#0
-	ldw	R2,#$0100
-	.byte	$a9	; lda immediate
-REUxBnk:	.byte	7
-	sta	R3L
-	rts
 
 ;*	GetRByte()	.a	byte read in, .x error
 GetRByte:	sty	GetROt+1
@@ -149,7 +148,7 @@ REUxRDx:	.byte	0
 	cmp	REUxWPg
 	bne	REUxFGt
 	cpy	REUxWDx	; now chk byte
-	bcc	REUxGet
+	bcc	REUxFGt
 	ldx	#$ff
 	rts
 REUxFGt:	lda	REUxBlk,y
@@ -222,6 +221,6 @@ FlushR:	lda	REUxCPg
 
 .ramsect
 REUxCPg:	.block 1
-REUxBlk:	.block 256	; Current Page
+REUxBlk:	.block 257	; Current Page
 
 </pre></body></html>

@@ -246,7 +246,7 @@ MnuSt06:	.word MnuTxt12	; menu text pointer
 	.word doBufSav	; **** action routine here!
 	.word MnuTxt16	; menu text pointer
 	.byte	$00	; MENU_ACTION
-	.word doExit	; **** action routine here!
+	.word doBufView	; **** action routine here!
 	.word MnuTxt17	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doExit	; **** action routine here!
@@ -294,12 +294,14 @@ doBufSav:	jsr	GotoFirstMenu
 	ldw	A2,#BufSavNo
 	jsr	CNCLBox
 	jmp	XferCncl	; we're done.
-10$:	ldb	XDnFType,#$01	; BZ:todo -- make seq, or die
+10$:	ldb	XDnFType,#$02	; first option==ascii
+	ldw	FBOXtt0,#FBOXtt2
+	ldw	FBOXtt1,#FBOXtt2+6
 	jsr	DoXDBox
 	beq	20$
 	rts		; cancel already done
 20$:	ldw	A2,#XFilename
-	mvb	XDnFType,A3L
+	ldb	A3L,#$01	; seq?
 	jsr	CreatSF
 	cpx	#0
 	beq	30$
@@ -311,12 +313,37 @@ doBufSav:	jsr	GotoFirstMenu
 	bne	90$
 	jsr	PutSByte
 	bra	30$
-90$:	lda	XDnFType
-	ora	#$80
+90$:	lda	#$81
 	sta	A2L
 	jsr	ClosSF
 	jmp	XferCncl	; we're done.
 BufSavNo:	.byte	27,"Buffer Empty?!",0
+
+doBufView:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	jsr	OpenRR
+	beq	10$
+	ldw	A2,#BufSavNo
+	jsr	CNCLBox
+	jmp	XferCncl	; we're done.
+10$:	jsr	ResColorScn	; <-- only if xfer not done
+	jsr	CrsrTL	; Screen clear and top-left
+	lda	txtTop
+	jsr	ClrTrmScn	; lda from prev MATTERS
+20$:	jsr	GetRByte
+	cpx	#0
+	bne	90$
+	jsr	SafeDraw
+	bra	20$
+90$:	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+	jsr	DrwCRLF
+	mvb	R1H,txtXY+2
+	mvw	R11,txtXY
+	; **TODO: move textXY to R1.11 or vis-a-versa
+	jmp	keySetup	
 
 doEchoOn:	lda	#$01
 	sta	flgEcho
