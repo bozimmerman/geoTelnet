@@ -249,8 +249,8 @@ XMObuild:	jsr	XMOSsVec
 	sta	XMOBufEnd
 	lda	XMOXType
 	beq	XMOcontSend
-	cpb	XMOCrc,XMOBufEnd
-	cpb	XMOCrc+1,XMOBufCrc
+	mvb	XMOCrc,XMOBufEnd
+	mvb	XMOCrc+1,XMOBufCrc
 XMOcontSend:	jsr	XMOminFlush
 	ldy	#0
 	sta	XMOBufBit

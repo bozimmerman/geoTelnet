@@ -181,10 +181,10 @@ Menu05:	.byte	$0f,$2b	; menu top, bottom
 	.byte	$80|$02	; HORIZONTAL menu | # items
 	.word MnuTxt10	; menu text pointer
 	.byte	$00	; MENU_ACTION
-	.word MenuAct	; **** action routine here!
+	.word DoXUpload	; **** action routine here!
 	.word MnuTxt11	; menu text pointer
 	.byte	$00	; MENU_ACTION
-	.word MenuAct	; **** action routine here!
+	.word DoXDownload	; **** action routine here!
 MnuTxt10:	.byte	27,"upload",0
 MnuTxt11:	.byte	27,"download",0
 
