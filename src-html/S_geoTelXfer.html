@@ -50,7 +50,7 @@ DoXUpload:	jsr	GotoFirstMenu
 	jsr	FBOXopen	; moves filename into XFilename
 	lda	XFilename
 	beq	15$
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	ldb	flgDoBg,#0
 	jmp	XUpload
@@ -64,6 +64,8 @@ PermFName:	.byte	$00
 FBOXobox:	.byte	$81
 	.byte	16	; getfiles
 	.byte	$06,$03
+	.byte	15
+	.word UpBxGfx
 	.byte	11
 	.byte	$84,$09
 	.word FBOXtxt4
@@ -76,8 +78,6 @@ FBOXobox:	.byte	$81
 	.word FBOXsele
 	.byte	$05,$11,$16	; open icon
 	.byte	$02,$11,$4c	; cancel icon
-	.byte	15
-	.word UpBxGfx
 FBOXnoo1:	.byte	18	; drive icon
 	.byte	$11,$28
 	.word FBOXdcon
@@ -89,11 +89,11 @@ FBOXdcon:	.word FBOXdmag
 	.word FBOXswdv
 FBOXdmag:
 <img src="00064.png" />
-UpBxGfx:	.byte 1,150,0,$0f	; movepento
+UpBxGfx:	.byte 1,0,0,$0f	; movepento
 	.byte	5,0	; newpattern
 	.byte	3	; rectangleto
-	.word 300
-	.byte	$0f
+	.word 319
+	.byte	$10
 	.byte	0
 
 FBOXsele:	;This routine handles clicks in the filename box
@@ -190,14 +190,14 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	cpx	#0
 	bne	15$
 	jsr	XComReset
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	A2,#XUpDnTxt
 	jsr	OKBox
 	bra	20$
 15$:	jsr	XComReset
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	A2,#XUpErTxt
@@ -386,7 +386,7 @@ DoXDownload:
 	jsr	FBOXcrve
 	cpx	#0
 	bne	05$
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	ldb	flgDoBg,#0
 	jmp	XDownload
@@ -420,7 +420,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	sta	A2L
 	jsr	ClosSF
 	jsr	XComReset
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	A2,#XDnDnTxt
@@ -431,7 +431,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	ldw	R0,#XFilename
 	jsr	DeleteFile
 	jsr	XComReset
-	lda	windowTop	; first row to clear
+	lda	txtTop	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	A2,#XDnErTxt

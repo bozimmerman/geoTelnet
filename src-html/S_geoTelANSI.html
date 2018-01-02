@@ -123,12 +123,12 @@ AnsiBhtt:	jsr	AnsiBroke
 	rts
 
 	.byte	0	; AnsiChtt-1 - temp .a sav
-AnsiChtt:	.byte	"mHfABCDsuJKhlpEFG",0
+AnsiChtt:	.byte	"mHfABCDsuJKhlpEFGd",0
 AnsiDhtt:	.word	Ansi_m_, Ansi_H, Ansi_f_, AnsiADone
 	.word	AnsiBDone, AnsiCDone, AnsiDDone, AnsisDone
 	.word	AnsiuDone, AnsiJDone, AnsiKDone, Ansi_h_
 	.word	Ansi_l_, AnsipDone, AnsiEDone, Ansi_F
-	.word	AnsiGDone
+	.word	AnsiGDone, Ansi_d_
 
 Ansi_m_:	lda	ansiNBuf
 	bne	10$	
@@ -221,18 +221,32 @@ Ansi_f_:	jsr	CrsrTL
 99$:	jmp	AnsiOut
 10$:	lda	ansiNBuf+1
 	beq	20$
-	jsr	CrsrDn
 	dec	ansiNBuf+1
-	bne	10$
+	beq	20$
+15$:	jsr	CrsrDn
+	dec	ansiNBuf+1
+	bne	15$
 20$:	cbi	ansiNBuf,#2
 	bcc	99$
 30$:	lda	ansiNBuf+2
 	beq	99$
-	jsr	CrsrRt
+	dec	ansiNBuf+2
+	beq	99$
+40$:	jsr	CrsrRt
 	dec	ansiNBuf+2
 	bne	30$
 	jmp	AnsiOut
 
+Ansi_d_:	lda	ansiNBuf	; Cursor Position Y, 1-based
+	bne	10$
+99$:	jmp	AnsiOut
+10$:	lda	ansiNBuf+1
+	beq	99$
+	dec	ansiNBuf+1
+	beq	99$
+20$:	jsr	CrsrDn
+	dec	ansiNBuf+1
+	bne	20$
 	
 
 AnsiADone:	jsr	CrsrUp
@@ -275,7 +289,7 @@ AnsiGDone:	jsr	CrsrStLn	; Move to column N, default 1
 	lda	ansiNBuf
 	bne	10$
 99$:	jmp	AnsiOut
-10$:	ldy	ansiNBuf
+10$:	ldy	ansiNBuf+1
 20$:	dey
 	beq	99$
 	jsr	CrsrRt

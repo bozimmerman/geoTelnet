@@ -219,7 +219,7 @@ PutLine:	ldw	R11,#0
 	cpb	R1H,txtBot
 	bcs	10$
 	cwi	colorLPtr,#$8fc0
-	bcc	05$
+	bcs	05$
 	avw	#40,colorLPtr
 05$:	mvw	colorLPtr,colorPtr
 	jsr	ClrColLn
@@ -262,10 +262,7 @@ ClrColLn:	tya
 	tay
 	rts
 
-PutDel:	dec	colorHalf
-	beq	10$
-	ldb	colorHalf,#1
-10$:	cwi	R11,#3	; todo: txtLeft
+PutDel:	cwi	R11,#3	; todo: txtLeft
 	bcs	15$
 	mvw	txtRight,R11
 	ldb	colorHalf,#0
@@ -275,11 +272,14 @@ PutDel:	dec	colorHalf
 	svw	#40,colorLPtr
 	mvw	colorLPtr,colorPtr
 	avw	#40,colorPtr
-15$:	sbw	curWidth,R11	; realSize, #$04
+15$:	dec	colorHalf
+	beq	20$
+	ldb	colorHalf,#1
+	dew	colorPtr
+20$:	sbw	curWidth,R11	; realSize, #$04
 	lda	#$20
 	jsr	PutChar
 	sbw	curWidth,R11
-	dew	colorPtr
 	ldb	flgDoBg,#1
 	rts
 
