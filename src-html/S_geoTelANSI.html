@@ -311,12 +311,49 @@ AnsiuDone:	mvw	AnsiASv,txtXY	; Restore Position
 	jmp	AnsiOut
 
 
-AnsiJDone:	jsr	CrsrTL	; Screen clear and top-left
+AnsiJDone:	lda	ansiNBuf
+	beq	10$
+	cbi	ansiNBuf+1,#0
+	bne	20$
+10$:	jsr	AnsiDC2E	; Erase cursor->End of screen
+	mvb	txtXY+2,R2L
+	mvb	txtXY+2,R2H
+	adb	curHeight,R2L
+	adb	curHeight,R2H
+	mvw	txtLeft,R3
+	mvw	txtRight,R4
+	jsr	Rectangle
+	jmp	AnsiOut
+20$:	cmp	#1
+	bne	30$
+	jsr	AnsiD2C	; Erase Start of Screen->Cursor
+	mvb	txtTop,R2L
+	mvb	txtXY,R2H
+	mvw	txtLeft,R3
+	mvw	txtRight,R4
+	jsr	Rectangle	
+	jmp	AnsiOut
+30$:	cmp	#2
+	bne	40$
+	jsr	CrsrTL	; Screen clear and top-left
 	lda	txtTop
 	jsr	ClrTrmScn	; lda from prev MATTERS
 	jmp	AnsiOut	; Erase Display and 0,0
+40$:	cmp	#3	; clear back-scroll
+	bne	50$
+	jmp	AnsiOut
+50$:	jmp	AnsiOut
 
-AnsiKDone:	lda	#0
+AnsiD2C:	lda	#0
+	jsr	SetPattern
+	mvb	txtXY+2,R2L
+	mvb	txtXY+2,R2H
+	adb	curHeight,R2H
+	mvw	txtLeft,R3
+	mvw	txtXY,R4
+	jsr	Rectangle
+
+AnsiDC2E:	lda	#0
 	jsr	SetPattern
 	mvb	txtXY+2,R2L
 	mvb	txtXY+2,R2H
@@ -324,6 +361,8 @@ AnsiKDone:	lda	#0
 	mvw	txtXY,R3
 	mvw	txtRight,R4
 	jsr	Rectangle
+
+AnsiKDone:	jsr	AnsiDC2E
 	jmp	AnsiOut	; Erase Pos->EOL (inclusive)
 
 

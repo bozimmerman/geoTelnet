@@ -31,6 +31,7 @@ scnSetup:	ldb	txtTop,#$10	; screen def
 	ldw	txtLeft,#$00
 	ldw	txtRight,#319
 	mvw	txtRight,txtREnd	; last chars
+	ldb	curWidth+1,#0
 	sbw	curWidth,txtREnd
 	inw	txtREnd	
 	mvb	txtBot,txtBEnd	; bot row
@@ -141,23 +142,47 @@ keyRestore:	sei
 	rts
 
 KeyPRtn:	lda	keyData
-	beq	99$
-	;TODO: *** turn arrow keypress in ansi esc, if ansi on
-	cmp	#$1d
 	bne	10$
-	lda	#$08
+	rts
 10$:	ldx	flgEcho
-	beq	30$
-	pha
-	jsr	SafePutC
-	pla
-30$:	pha
-	jsr	ComSPut	; *
-	; send to modem
-	pla
+	beq	50$
+	cmp	#$1d
+	bne	20$
+	lda	#$08
+20$:	jsr	SafePutC
+50$:	lda	keyData
+	jsr	KeyComPut
 99$:	rts
 
-
+KeyComPut:	ldx	flgANSI
+	beq	30$
+	ldx	#0
+11$:	cmp	KeyACt,x
+	beq	20$
+	inx
+	inx
+	cpx	#$08
+	bcc	11$
+	bcs	30$
+20$:	inx
+	lda	KeyACt,x
+	pha
+	lda	#27
+	jsr	ComSPut
+	lda	#91
+	jsr	ComSPut
+	pla
+30$:	cmp	#$1d
+	bne	31$
+	lda	#$08
+31$:	cmp	#$16
+	bne	40$
+	lda	#$1b
+40$:	pha
+	jsr	ComSPut
+	pla
+	rts
+KeyACt:	.byte 16,65,17,66,8,68,30,67,0,0
 
 PutChars:	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
@@ -276,9 +301,11 @@ PutDel:	cwi	R11,#3	; todo: txtLeft
 	beq	20$
 	ldb	colorHalf,#1
 	dew	colorPtr
-20$:	sbw	curWidth,R11	; realSize, #$04
+20$:	ldb	curWidth+1,#0
+	sbw	curWidth,R11	; realSize, #$04
 	lda	#$20
 	jsr	PutChar
+	ldb	curWidth+1,#0
 	sbw	curWidth,R11
 	ldb	flgDoBg,#1
 	rts
@@ -307,7 +334,8 @@ CrsrRt:	cpw	txtXY,txtREnd	; Cursor Forward
 	beq	20$
 	inw	colorPtr
 	ldb	colorHalf,#1
-20$:	adw	curWidth,txtXY
+20$:	ldb	curWidth+1,#0
+	adw	curWidth,txtXY
 	rts
 
 CrsrLt:	cpw	txtLeft,txtXY	; Cursor Backward
@@ -317,7 +345,8 @@ CrsrLt:	cpw	txtLeft,txtXY	; Cursor Backward
 	beq	20$
 	dew	colorPtr
 	ldb	colorHalf,#1
-20$:	sbw	curWidth,txtXY
+20$:	ldb	curWidth+1,#0
+	sbw	curWidth,txtXY
 	rts
 
 CrsrTL:	mvb	txtTop,txtXY+2

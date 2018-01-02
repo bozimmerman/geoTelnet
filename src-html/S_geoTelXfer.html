@@ -64,7 +64,7 @@ PermFName:	.byte	$00
 FBOXobox:	.byte	$81
 	.byte	16	; getfiles
 	.byte	$06,$03
-	.byte	15
+	.byte	19
 	.word UpBxGfx
 	.byte	11
 	.byte	$84,$09
@@ -72,8 +72,6 @@ FBOXobox:	.byte	$81
 	.byte	12
 	.byte	$84,$13
 	.byte A6
-	.byte	19
-	.word ReDoMenu
 	.byte	17
 	.word FBOXsele
 	.byte	$05,$11,$16	; open icon
@@ -89,12 +87,14 @@ FBOXdcon:	.word FBOXdmag
 	.word FBOXswdv
 FBOXdmag:
 <img src="00064.png" />
-UpBxGfx:	.byte 1,0,0,$0f	; movepento
-	.byte	5,0	; newpattern
-	.byte	3	; rectangleto
-	.word 319
-	.byte	$10
-	.byte	0
+UpBxGfx:	jsr	ReDoMenu
+	mvw	leftMargin,R3
+	mvw	rightMargin,R4
+	ldb	R11L,#$0f
+	lda	#0
+	jsr	HorizontalLine
+	rts
+
 
 FBOXsele:	;This routine handles clicks in the filename box
 	lda	mouseData	;was button pressed?
