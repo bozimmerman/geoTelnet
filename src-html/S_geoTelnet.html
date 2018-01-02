@@ -109,16 +109,6 @@ mdmInitStr:	.byte 13,"  atze0v1x1f0q0r0&p0i0",13,0
 mdmDoneStr:	.byte 13,"  atzb1200",13,0
 
 
-ComPutS:	ldy	#0	; *
-10$:	lda	(R0),y
-	beq	20$
-	jsr	ComSPut
-	iny
-	bne	10$
-20$:	rts
-
-
-
 keySetup:	mvw	keyVector,savKeyVec
 	sei
 	ldw	keyVector,#KeyPRtn
@@ -145,6 +135,8 @@ KeyPRtn:	lda	keyData
 	bne	10$
 	rts
 10$:	ldx	flgEcho
+	beq	50$
+	cmp	#$08
 	beq	50$
 	cmp	#$1d
 	bne	20$
@@ -184,6 +176,14 @@ KeyComPut:	ldx	flgANSI
 	rts
 KeyACt:	.byte 16,65,17,66,8,68,30,67,0,0
 
+ComPutS:	ldy	#0	; *
+10$:	lda	(R0),y
+	beq	20$
+	jsr	ComSPut
+	iny
+	bne	10$
+20$:	rts
+
 PutChars:	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
 PutChar2:	mvw	R0,PutCharLp+3
@@ -206,6 +206,8 @@ SafePutC:	pha
 	mvb	R1H,txtXY+2
 	rts
 
+
+
 SPutChar:	cmp	#27
 	bne	10$
 	jmp	AnsiStart
@@ -224,22 +226,23 @@ SPutChar:	cmp	#27
 20$:	cmp	#$20
 	bcs	30$
 29$:	rts
-30$:	jsr	PutChar
+30$:	cmp	#$7f
+	bcs	29$
+	jsr	PutChar	; small put char?
 	lda	curColor
 	.byte	$8d	; sta
 colorPtr:	.word COLOR_MATRIX
-	dec	colorHalf
-	beq	10$
-	ldb	colorHalf,#1
+	lda	R11L
+	and	#$04
+	bne	10$
 	inw	colorPtr
-10$:	ldb	flgDoBg,#1
+10$:	inc	flgDoBg
 	cpw	R11,txtRight
 	bcs	PutLine
 	rts
 
 
 PutLine:	ldw	R11,#0
-	ldb	colorHalf,#1
 	adb	curHeight,R1H
 	cpb	R1H,txtBot
 	bcs	10$
@@ -247,7 +250,6 @@ PutLine:	ldw	R11,#0
 	bcs	05$
 	avw	#40,colorLPtr
 05$:	mvw	colorLPtr,colorPtr
-	jsr	ClrColLn
 	rts
 10$:	sbb	curHeight,R1H
 	mvw	colorLPtr,colorPtr
@@ -290,24 +292,23 @@ ClrColLn:	tya
 PutDel:	cwi	R11,#3	; todo: txtLeft
 	bcs	15$
 	mvw	txtRight,R11
-	ldb	colorHalf,#0
 	cbi	R1H,#$20	; todo: txtHeight?
 	bcc	15$
 	sbb	curHeight,R1H
 	svw	#40,colorLPtr
 	mvw	colorLPtr,colorPtr
 	avw	#40,colorPtr
-15$:	dec	colorHalf
-	beq	20$
-	ldb	colorHalf,#1
-	dew	colorPtr
-20$:	ldb	curWidth+1,#0
+15$:	ldb	curWidth+1,#0
 	sbw	curWidth,R11	; realSize, #$04
 	lda	#$20
-	jsr	PutChar
+	jsr	SmallPutChar
 	ldb	curWidth+1,#0
 	sbw	curWidth,R11
-	ldb	flgDoBg,#1
+	lda	R11L
+	and	#$04
+	beq	20$
+	dew	colorPtr
+20$:	ldb	flgDoBg,#1
 	rts
 
 
@@ -330,24 +331,24 @@ CrsrDn:	cpb	txtXY+2,txtBEnd	; Cursor Down
 CrsrRt:	cpw	txtXY,txtREnd	; Cursor Forward
 	bcc	10$
 	rts
-10$:	dec	colorHalf
-	beq	20$
-	inw	colorPtr
-	ldb	colorHalf,#1
-20$:	ldb	curWidth+1,#0
+10$:	ldb	curWidth+1,#0
 	adw	curWidth,txtXY
-	rts
+	lda	txtXY
+	and	#$04
+	bne	20$
+	inw	colorPtr
+20$:	rts
 
 CrsrLt:	cpw	txtLeft,txtXY	; Cursor Backward
 	bcc	10$
 	rts
-10$:	dec	colorHalf
+10$:	ldb	curWidth+1,#0
+	sbw	curWidth,txtXY
+	lda	txtXY
+	and	#$04
 	beq	20$
 	dew	colorPtr
-	ldb	colorHalf,#1
-20$:	ldb	curWidth+1,#0
-	sbw	curWidth,txtXY
-	rts
+20$:	rts
 
 CrsrTL:	mvb	txtTop,txtXY+2
 	ldw	colorLPtr,#COLOR_MATRIX+(40*2)
@@ -356,7 +357,6 @@ CrsrTL:	mvb	txtTop,txtXY+2
 
 CrsrStLn:	mvw	txtLeft,txtXY
 	mvw	colorLPtr,colorPtr
-	ldb	colorHalf,#1
 	rts
 
 
@@ -410,7 +410,6 @@ origColor:	.block	1
 baseColor:	.block	1
 curColor:	.block	1
 colorLPtr:	.block	2
-colorHalf:	.block	1
 colorBBuf:	.block	$03e9-(40*2)
 ; that's all folks!
 
