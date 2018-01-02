@@ -59,7 +59,9 @@ ClrTrmScn:	pha
 	ldb	R2H,#199
 	ldw	R3,#0
 	ldw	R4,#319
+	ldb	dispBufferOn,#ST_WR_FORE|ST_WR_BACK
 	jsr	Rectangle
+	ldb	dispBufferOn,#ST_WR_FORE
 	ldb	baseColor,#(7*16)	; yellow on black
 	ldw	R1,#COLOR_MATRIX+(40*2)
 	ldw	R0,#$3e8-(40*2)	; set initial scrn color

@@ -421,12 +421,13 @@ XMOgetKey:	tya
 	rts
 
 XMOchkBlk:	lda	XMOXType
-	bne	10$
+	bne	XMOchkCrc
 	ldy	#0
 	sta	XMOChkSum
 10$:	lda	XMOBuf3,y
 	add	XMOChkSum
 	sta	XMOChkSum
+	iny
 	cpy	#$80
 	bcc	10$
 	rts

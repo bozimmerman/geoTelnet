@@ -157,12 +157,10 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
-	jsr	ComReInit
-	ldw	R0,#XUpFlTxt
+	ldw	A2,#XUpFlTxt
 	jsr	OKBox
 	jmp	keySetup
-10$:	jsr	ComReInit	; clean up after OpenSF
-	jsr	UseSystemFont
+10$:	jsr	UseSystemFont
 	jsr	XUpBox
 	ldw	A2,#XUpFillBuf
 	ldw	A3,#XUpRead
@@ -173,13 +171,13 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
-	ldw	R0,#XUpDnTxt
+	ldw	A2,#XUpDnTxt
 	jsr	OKBox
 	bra	20$
 15$:	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
-	ldw	R0,#XUpErTxt
+	ldw	A2,#XUpErTxt
 	jsr	OKBox
 20$:	jsr	keySetup
 	rts
@@ -219,8 +217,7 @@ XUpFillBuf:	jsr	XUpdBox
 	cpx	#0
 	bne	60$
 	inc	XMoreFlg
-60$:	jsr	ComReInit	; clean up after GetSMem
-	ldx	#0
+60$:	ldx	#0
 	rts
 
 
@@ -296,11 +293,19 @@ DoXDownload:
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
+	ldw	A5,#XFilename
+	ldy	#0
+	tya
+04$:	sta	(A5),y	; clear the filename
+	iny
+	cpy	#18
+	bcc	04$
 05$:	ldb	FBOXnod2,#$06	; reset disk icon
 	cpb	curDrive,VPRGdriv
 	bne	10$
 	ldb	FBOXnod2,#0	; clear out disk icon
 10$:	jsr	FBOXmvnm
+	ldw	A5,#XFilename
 	ldw	R0,#FBOXcbox	;now perform actual dialog box
 	ldw	A6,#FBOXdnam
 	jsr	DoDlgBox
@@ -334,12 +339,10 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
-	jsr	ComReInit	; clean up after OpenSF
-	ldw	R0,#XDnFlTxt
+	ldw	A2,#XDnFlTxt
 	jsr	OKBox
 	jmp	keySetup
-10$:	jsr	ComReInit	; clean up after OpenSF
-	jsr	UseSystemFont
+10$:	jsr	UseSystemFont
 	jsr	XDnBox
 	ldw	A2,#XDnRcvByte
 	ldw	A3,#XDnGooBlk
@@ -352,7 +355,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
-	ldw	R0,#XDnDnTxt
+	ldw	A2,#XDnDnTxt
 	jsr	OKBox
 	bra	20$
 15$:	jsr	XDnFlush
@@ -361,7 +364,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
-	ldw	R0,#XDnErTxt
+	ldw	A2,#XDnErTxt
 	jsr	OKBox
 20$:	jsr	keySetup
 	rts
@@ -383,7 +386,6 @@ XDnFlush:	ldw	A2,#BACK_SCR_BASE
 	mvw	XBufWrPtr,A3
 	jsr	PutSMem
 	ldw	XBufWrPtr,#BACK_SCR_BASE
-	jsr	ComReInit	; clean up after PutSMem
 	rts
 
 XDnGooBlk:	avw	#128,XBytesDone
@@ -548,7 +550,7 @@ FBOXtxtA:  	.byte	$18,"ERROR: Cannot create!",27,0
 XFilename:	.block 20
 FBOXdnam:	.block 20
 XBufWrPtr:	.block 2
-XBufRdPtr:	.block 1
+XBufRdPtr:	.block 2
 XMoreFlg:	.block 1
 XBytesDone:	.block 2
 XErrors:	.block 1
