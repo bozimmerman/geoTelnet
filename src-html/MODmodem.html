@@ -183,6 +183,25 @@ ComEnable:	jsr CLL2_0N
 	rts 
 
 
+;**********************************
+;* ComOnline	Check whether DCD is high
+;* Inputs:
+;* Outputs:	N = 0, not online
+;*	N > 0, online
+;**********************************
+ComOnline:	lda	$01
+	pha
+	lda	#$35
+	sta	$01
+	lda	$dd01
+	and	#$10
+	sta	ComOFlg+1
+	pla
+	sta	$01
+ComOFlg:	lda	#$00
+	rts
+
+
 ;*****************************
 ;* ComSend	Send byte to RS-232
 ;* Inputs:

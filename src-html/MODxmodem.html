@@ -24,6 +24,95 @@
 
 .psect
 
+XMO_ACK	= $06
+XMO_CAN	= $18
+XMO_EOT	= $04
+XMO_NAK	= $15
+XMO_SOH	= $01
+XMO_CNAK	= $43
+XMO_PAD	= $1A
+XMO_OTH	= $02
+
+
+XMOrcvChk:	ldb	XMOXType,#0
+	ldb	XMOBufSize,#$84
+	jmp	XMOrcvSt
+XMOrcvCrc:	ldb	XMOXType,#1
+	ldb	XMOBufSize,#$85
+XMOrcvSt:	ldb	XMOUpDn,#1
+	jsr	XMOClear
+	jsr	XMOBufFlush
+	inc	XMOBlock
+	lda	XMOXType
+	bne	XMOrcvLp
+	lda	#XMO_CNAK
+	jsr	ComSPut
+XMOrcvLp:	lda	XMOErrors
+	cmp	#$0e
+	bcc	11$
+10$:	ldb	XMOAbort,#$01
+11$:	jsr	XMOChkAbort
+	jsr	XMOChkTm
+	lda	XMOAbort
+	beq	15$
+	jmp	XMOXAbort
+14$:	jmp	XMOXRcv
+15$:	cbi	XMOBlock,#$01
+	bne	17$
+	cbi	XMOTmOuts,#$02
+	bne	17$
+	beq	10$	; to cancel
+17$:	lda	XMOClock
+	beq	18$
+	jmp	XMONoBort
+18$:	lda	XMOBuf
+	cmp	#XMO_CAN
+	beq	10$
+	cmp	#XMO_EOT
+	beq	14$
+	jsr	XMOgetKey
+	lda	XMOKeySync
+	beq	XMOrcvLp
+	jsr	XMOReTm
+	ldy	XMOBufBit
+	lda	XMOKeyFree
+	sta	XMOBuf,y
+	inc	XMOBufBit
+	iny
+	cpy	XMOBufSize
+	bcc	XMOrcvLp	; 
+	jsr	XMOPause	; Check the Block
+	lda	XMOBuf
+	cmp	#XMO_EOT
+	beq	14$
+	cmp	#XMO_CAN
+	beq	10$
+	cmp	#XMO_OTH
+	beq	20$
+	cmp	#XMO_SOH
+	beq	20$
+	jmp	XMOConRcv
+; continued on next page
+
+20$:	cpb	XMOBuf+1, XMOBlock
+	bne	XMOConRcv
+	eor	#$ff
+	cmp	XMOBuf+1
+	bne	XMOConRcv
+	jsr	XMOchkBlk
+	lda	XMOXType
+	bne	22$
+	cpb	XMOChkSum, XMOBufEnd
+	beq	25$
+	jmp	XMOConRcv
+22$:	cpb	XMOBufEnd, XMOCrc
+	bne	XMOConRcv
+	cpb	XMOBufCrc,XMOCrc+1
+	bne	XMOConRcv
+25$:	ldb	XMOGood,#1
+XMOConRcv:	lda	XMOGood
+	
+	rts
 
 
 XMOClear:	lda	#0
@@ -76,8 +165,8 @@ XMOBadTm:	inc	XMOTmOuts
 
 
 
-XMOChkAbort:	; TODO: * Is C= hty held down?
-	jsr	IsConnected
+XMOChkAbort:	; TODO: * Is C= key held down?
+	jsr	ComOnline
 	beq	10$
 	lda	#0
 	rts
@@ -96,9 +185,67 @@ XMOMinFlush:	jsr	CLL2xxRb
 	sta	XMOBufBit
 	sta	XMOGood
 	jsr	XMOReTm
-	sta
+	rts
+
+XMOPause:	lda	$01
+	pha
+	lda	#$35
+	sta	$01
+	lda	#0
+	sta	APITemp2
+10$:	lda	#0
+	sta	$dc08
+20$:	lda	$dc08
+	beq	20$
+	inc	APITemp2
+	cbi	APITemp2,#9	; almost a second
+	bcc	10$
+	pla
+	sta	$01
+	rts
 
 
+XMOgetKey:	tya
+	pha
+	lda	#0
+	sta	XMOKeySync
+	jsr	ComGet
+	bcc	10$
+	pla
+	tay
+	rts
+10$:	sta	XMOKeyFree
+	inc	XMOKeySync
+	pla
+	tay
+	rts
+
+XMOchkBlk:	lda	XMOXType
+	bne	10$
+	ldy	#0
+	sta	XMOChkSum
+10$:	lda	XMOBuf3,y
+	add	XMOChkSum
+	sta	XMOChkSum
+	cpy	#$80
+	bcc	10$
+	rts
+
+XMOchkCrc:	ldy	#0
+	sty	XMOCrc
+	sty	XMOCrc+1
+10$:	lda	XMOBuf3,y
+	eor	XMOCrc
+	tax
+	lda	XMOcrcMB,x
+	eor	XMOCrc+1
+	sta	XMOCrc
+	lda	XMOcrcLB,x
+	sta	XMOCrc+1
+	iny
+	cpy	#$80
+	bne	10$
+	rts	
 
 XMOcrcLB:	.byte 0,33,66,99,132,165,198,231
 	.byte 8,41,74,107,140,173,206,239
@@ -181,5 +328,14 @@ XMOCrc:	.block 2
 XMOClock:	.block 1
 XMOChkC:	.block 1
 XMOIOStat:	.block 1
-XMOBuf:	.block $86
+XMOKeySync:	.block 1
+XMOKeyFree:	.block 1
+XMOXType:	.block 1
+XMOUpDn:	.block 1
+
+XMOBuf:	.block 3
+XMOBuf3:	.block $80
+XMOBufEnd:	.block 1
+XMOBufCrc:	.block 1
+
 </pre></body></html>

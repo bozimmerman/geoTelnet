@@ -76,14 +76,14 @@ MnuDyn01:	jsr	ScreenSafe
 	ldw	R0,#DAABMenu
 	rts
 MnuDyn02:	jsr	ScreenSafe
-	jsr	IsConnected
+	jsr	ComOnline
 	bne	10$
 	ldw	R0,#Menu02
 	rts
 10$:	ldw	R0,#Menu02a
 	rts
 MnuDyn03:	jsr	ScreenSafe
-	jsr	IsConnected
+	jsr	ComOnline
 	beq	10$
 	ldw	R0,#Menu03a
 	rts
@@ -93,7 +93,7 @@ MnuDyn04:	jsr	ScreenSafe
 	ldw	R0,#Menu04
 	rts
 MnuDyn05:	jsr	ScreenSafe
-	jsr	IsConnected
+	jsr	ComOnline
 	beq	10$
 	ldw	R0,#Menu05a
 	rts
@@ -227,19 +227,6 @@ FixEcho:	lda	#27
 	sta	MnuTxt0f
 	rts
 
-IsConnected:	lda	#0	; ***BZ:FIX!!
-	rts		; ***BZ:FIX!!
-	lda	$01
-	pha
-	lda	#$35
-	sta	$01
-	lda	$dd01
-	and	#$10
-	sta	flgConn+1
-	pla
-	sta	$01
-flgConn:	lda	#$00
-	rts
 
 
 
@@ -337,7 +324,7 @@ doExit:	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
-	jsr	IsConnected
+	jsr	ComOnline
 	bne	50$
 	ldw	A2,#ExitString
 	jsr	YNBox
@@ -378,7 +365,7 @@ doDisconnect:	jsr	GotoFirstMenu
 
 
 Disconn2:	sta	A4H
-	jsr	IsConnected
+	jsr	ComOnline
 	bne	10$
 	rts
 10$:	lda	A4H
