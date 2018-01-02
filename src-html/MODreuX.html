@@ -32,7 +32,7 @@
 ;*			.word	Number of bytes) 
 ;* TODO:	PutRMem(	.word	Buffer pointer
 ;*			.word	Last byte pointer) 
-;*
+;*	FlushR(	)
 ;*     * = includes i_Function call, and returns
 ;*            status in the .x register
 ;*
@@ -194,6 +194,10 @@ REUxWDx:	.byte	0
 	rts
 20$:	ldx	#0
 	rts
+
+;*	FlushR(	)
+FlushR:	lda	REUxCPg
+	jmp	REUxFtch	
 
 .ramsect
 REUxCPg:	.block 1

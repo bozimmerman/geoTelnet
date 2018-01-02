@@ -34,7 +34,10 @@ ResColorScn:	ldw	R1,#COLOR_MATRIX+(40*2)	; scrn color
 	jsr	MoveData
 	rts
 
-DrawMenu:	lda	#[(Menu00)	; point to first menu
+DrawMenu:
+	lda	BuffEnable
+	
+10$:	lda	#[(Menu00)	; point to first menu
 	sta	$02
 	lda	#](Menu00)
 	sta	$03
@@ -57,8 +60,8 @@ RecoMenu:	jsr	$8fc2
 
 
 Menu00:	.byte	$00,$0e	; menu top, bottom
-	.word $0000,$00d3	; menu left, right
-	.byte	$00|$07	; VERTICAL menu | # items
+	.word $0000,$0103	; menu left, right
+	.byte	$00|$08	; VERTICAL menu | # items
 	.word MnuTxt00	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn01	; sub menu pointer
@@ -77,12 +80,20 @@ Menu00:	.byte	$00,$0e	; menu top, bottom
 	.word MnuTxt05	; menu text pointer
 	.byte	$40	; DYN_MENU
 	.word MnuDyn06	; sub menu pointer
+	.word MnuTxt06	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn07	; sub menu pointer
 MnuTxt00:	.byte	27,"geos",0
 MnuTxt01:	.byte	27,"telnet",0
 MnuTxt02:	.byte	27,"baud rate",0
 MnuTxt03:	.byte	27,"term",0
 MnuTxt04:	.byte	27,"x-modem",0
-MnuTxt05:	.byte 27,"exit",0
+MnuTxt05:	.byte	27,"buffer",0
+MnuTxt06:	.byte 27,"exit",0
+
+
+
+
 
 MnuDyn01:	jsr	BackMenu
 	ldw	R0,#DAABMenu
@@ -112,7 +123,13 @@ MnuDyn05:	jsr	BackMenu
 10$:	ldw	R0,#Menu05a
 	rts
 MnuDyn06:	jsr	BackMenu
-	ldw	R0,#Menu06
+	lda	BuffEnable
+	beq	10$
+	ldw	R0,
+10$:	ldw	R0,#Menu06
+	rts
+MnuDyn07:	jsr	BackMenu	; exit
+	ldw	R0,#Menu07b
 	rts
 
 Menu02:	.byte	$0f,$2b	; menu top, bottom
@@ -216,13 +233,22 @@ Menu05a:	.byte	$0f,$1d	; menu top, bottom
 	.word MenuAct	; **** action routine here!
 MnuTxa10:	.byte	27,"not connected",27,0
 
-Menu06:	.byte	$0f,$1d	; menu top, bottom
+Menu06:	.byte	$0f,$5d	; menu top, bottom
 	.word $00ba,$00f7	; menu left, right
 	.byte	$80|$01	; HORIZONTAL menu | # items
 	.word MnuTxt12	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doExit	; **** action routine here!
 MnuTxt12:	.byte	27,"to deskTop",0
+
+
+Menu07:	.byte	$0f,$1d	; menu top, bottom
+	.word $00d0,$0127	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+	.word MnuTxt13	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doExit	; **** action routine here!
+MnuTxt13:	.byte	27,"to deskTop",0
 
 
 doEchoOn:	lda	#$01
@@ -461,5 +487,6 @@ modal1Off:	jsr	FixFont80
 	rts
 
 
-
+.ramsect
+BuffEnab:	.block	1
 </pre></body></html>

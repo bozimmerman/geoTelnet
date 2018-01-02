@@ -616,7 +616,13 @@ MainLp2:	jsr	ComGet
 	lda	#$30
 	sta	$01
 	txa
-	jsr	DrawChar
+	.byte	$a2	; ldx immediate
+BufferFlg:	.byte 0
+	beq	25$
+	pha
+	jsr	PutRByte
+	pla
+25$:	jsr	DrawChar
 	pla
 	sta	$01
 	dec	A5L
