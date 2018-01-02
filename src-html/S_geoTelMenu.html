@@ -272,14 +272,14 @@ doBaud:	cmp	CLL2Baud
 30$:	lda	#13
 	sta	BaudCmd+4,y
 	jsr	keyRestore
-	mvb	CLL2BfRdx,CLL2BfWdx
+	jsr	CLL2xxRb
 	ldw	R0,#BaudCmd
 	jsr	ComPutS
 	ldw	R0,#BaudCmd
 	jsr	PutChars
 	jsr	BaudSet
 	jsr	FixBaud
-	mvb	CLL2BfRdx,CLL2BfWdx
+	jsr	CLL2xxRb
 	jsr	keySetup
 	jmp	GotoFirstMenu	
 

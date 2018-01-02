@@ -38,7 +38,8 @@
 ;* Baud Cds:	0=300, 1=1200, 2=2400,3=4800
 ;*	4=7200,5=9600,6=144, 7=192
 ;********************************
-ComInit:	lda A3L
+ComInit:	jsr CLL2xxRb
+	lda A3L
 	jsr CLL2BSet
 	mvb A3H,CLL2FloC
  	sei
@@ -105,6 +106,12 @@ ComUninst: 	sei
 	cli
 	clc 
 	rts 
+
+CLL2xxRb:	lda #0
+	sta CLL2BfRdx
+	sta CLL2BfWdx
+	ldb CLL2BfFdx,#$F0
+	rts
 
 CLL2_0FF:	pha
 	lda #$30
