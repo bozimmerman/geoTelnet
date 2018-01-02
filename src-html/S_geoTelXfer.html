@@ -41,7 +41,9 @@ DoXUpload:	jsr	GotoFirstMenu
 	jsr	FBOXopen	; moves filename into XFilename
 	lda	XFilename
 	beq	15$
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
+	ldb	flgDoBg,#0
 	jmp	XUpload
 
 XferCncl:	lda	VPRGdriv
@@ -166,12 +168,14 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	jsr	XMOsend
 	cpx	#0
 	bne	15$
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	R0,#XUpDnTxt
 	jsr	OKBox
 	bra	20$
-15$:	jsr	ClrTrmScn	; clears the screen
+15$:	lda	#$10	; first row to clear
+	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	R0,#XUpErTxt
 	jsr	OKBox
@@ -265,21 +269,21 @@ XDnBox:	jsr	XferBox
 
 XUpdBox:	lda	#0
 	jsr	SetPattern
-	ldw	R3,#$0086
+	ldw	R3,#$008e
 	ldw	R4,#$00c0
 	ldb	R2L,#$50
 	ldb	R2H,#$68
 	jsr	Rectangle
-	ldw	R11,#$0086
+	ldw	R11,#$0090
 	ldb	R1H,#$57
 	mvw	XBytesDone,R0
-	lda	#0
+	lda	#$ff
 	jsr	PutDecimal
-	ldw	R11,#$0086
+	ldw	R11,#$0090
 	ldb	R1H,#$65
 	mvb	XErrors,R0L
 	ldb	R0H,#0
-	lda	#0
+	lda	#$ff
 	jsr	PutDecimal
 	rts		; exit from screen routine
 
@@ -313,7 +317,9 @@ DoXDownload:
 	jsr	FBOXcrve
 	cpx	#0
 	bne	05$
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
+	ldb	flgDoBg,#0
 	jmp	XDownload
 
 XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
@@ -338,6 +344,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	bne	15$
 	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	R0,#XDnDnTxt
@@ -346,6 +353,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 15$:	jsr	XDnFlush
 	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	R0,#XDnErTxt

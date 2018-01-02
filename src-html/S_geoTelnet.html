@@ -24,6 +24,7 @@ CleanExit:	jsr	PromptOff
 	jmp	EnterDeskTop
 
 scnSetup:	mvb	COLOR_MATRIX,origColor
+	lda	#0
 	jsr	ClrTrmScn
 	jsr	UseSystemFont	; * for now
 	ldw	A2,#0	; "About" refresh
@@ -48,11 +49,13 @@ scnReset:	jsr	FixFont80
 	ldw	rightMargin,#319
 	rts
 
-ClrTrmScn:	lda	#0
+ClrTrmScn:	pha
+	lda	#0
 	sta	ansiDex
 	sta	ansiNBuf
 	jsr	SetPattern
-	ldb	R2L,#0
+	pla
+	sta	R2L
 	ldb	R2H,#199
 	ldw	R3,#0
 	ldw	R4,#319
