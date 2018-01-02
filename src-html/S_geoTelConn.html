@@ -35,18 +35,18 @@ QDoConn:	mvb	baseColor,curColor
 	ldw	R0,#QConnCmd
 	jsr	ComPutS
 	ldw	R0,#QConnCmd
-	jsr	PutChars
+	jsr	DrawStr
 	ldw	R0,#NewHost
 	jsr	ComPutS
 	ldw	R0,#NewHost
-	jsr	PutChars
+	jsr	DrawStr
 	ldw	R0,#QConnRcm
 	jsr	ComPutS
 	ldw	R0,#QConnRcm
-	jsr	PutChars
+	jsr	DrawStr
 	rts
 	
-QConnCmd:	.byte	13,"atdt",34,0
+QConnCmd:	.byte	13,"atd",34,0
 QConnRcm:	.byte 34,13,0
 
 QConnDat:	.byte	$01	; size flag, and shadow pattern

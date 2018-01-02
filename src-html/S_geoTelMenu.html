@@ -296,7 +296,7 @@ doBaud:	cmp	CLL2Baud
 	ldw	R0,#BaudCmd
 	jsr	ComPutS
 	ldw	R0,#BaudCmd
-	jsr	PutChars
+	jsr	DrawStr
 	jsr	BaudSet
 	jsr	FixBaud
 	jsr	CLL2xxRb

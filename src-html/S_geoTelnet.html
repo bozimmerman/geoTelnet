@@ -142,7 +142,7 @@ KeyPRtn:	lda	keyData
 	cmp	#$1d
 	bne	20$
 	lda	#$08
-20$:	jsr	SafePutC
+20$:	jsr	SafeDraw
 50$:	lda	keyData
 	jsr	KeyComPut
 99$:	rts
@@ -185,31 +185,31 @@ ComPutS:	ldy	#0	; *
 	bne	10$
 20$:	rts
 
-PutChars:	mvb	txtXY+2,R1H
+DrawStr:	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
-PutChar2:	mvw	R0,PutCharLp+3
-PutCharLp:	ldy	#0
+DrwStr2:	mvw	R0,DrwStrLp+3
+DrwStrLp:	ldy	#0
 	lda	$9999
 	beq	30$
-20$:	jsr	SPutChar
-	inw	PutCharLp+3
-	bra	PutCharLp	
+20$:	jsr	DrawChar
+	inw	DrwStrLp+3
+	bra	DrwStrLp	
 30$:	mvw R11,txtXY
 	mvb	R1H,txtXY+2
 	rts
 
-SafePutC:	pha
+SafeDraw:	pha
 	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
 	pla
-	jsr	SPutChar
+	jsr	DrawChar
 	mvw R11,txtXY
 	mvb	R1H,txtXY+2
 	rts
 
 
 
-SPutChar:	pha
+DrawChar:	pha
 	lda	ansiDex
 	beq	11$
 	pla
@@ -226,7 +226,7 @@ SPutChar:	pha
 	beq	12$
 	cmp	#$0d
 	bne	15$
-	jmp	PutLine
+	jmp	DrawEOL
 15$:	cmp	#$08
 	bne	20$
 	jmp	PutDel
@@ -245,11 +245,11 @@ colorPtr:	.word COLOR_MATRIX
 	inw	colorPtr
 10$:	inc	flgDoBg
 	cpw	R11,txtRight
-	bcs	PutLine
+	bcs	DrawEOL
 	rts
 
 
-PutLine:	ldw	R11,#0
+DrawEOL:	ldw	R11,#0
 	adb	curHeight,R1H
 	cpb	R1H,txtBot
 	bcs	10$
@@ -414,6 +414,7 @@ Tel1Ch:	.byte 251, <Tel2Ch, >Tel2Ch; WILL
 	; WILL
 Tel2Ch:	.byte	24, <TelWi_TT, >TelWi_TT + $80; TERMTYPE
 	.byte	1, <TelWi_Echo, >TelWi_Echo + $80; ECHO
+	.byte	3, <TelWi_SGA, >TelWi_SGA + $80; Supp go ah
 	.byte	$80, <TelWi_, >TelWi_	 + $80; everything else
 	.byte	0,0,0
 	; WONT
@@ -422,6 +423,8 @@ Tel3Ch:	.byte	1, <TelWo_Echo, >TelWo_Echo + $80; echo
 	; DO
 Tel4Ch:	.byte	24, <TelDo_TT, >TelDo_TT + $80; TERMTYPE
 	.byte	1, <TelDo_Echo, >TelDo_Echo + $80; ECHO
+	.byte	31, <TelDo_NAWS, >TelDo_NAWS + $80; NAWS
+	.byte	3, <TelDo_SGA, >TelDo_SGA + $80; Supp go ah
 	.byte	$80, <TelDo_, >TelDo_	 + $80; everything else
 	.byte	0,0,0
 	; DONT
@@ -458,10 +461,26 @@ TelSB_Do:	lda	#$00
 	jmp	TelnOut
 TelSBTTStr:	.byte	255,250,24,0,'a','n','s','i',255,240,0
 
+
+
+TelDo_NAWS:	ldy	#0
+10$:	lda	TelWiNaStr,y
+	jsr	ComSPut
+	iny
+	cpy	#12
+	bcc	10$
+	jmp	TelnOut
+TelWiNaStr:	.byte	255,251,31,255,250,31,0,80,0,23,255,240,0
+
 TelWi_TT:	ldw	R0,#TelDoTTStr
 	jsr	ComPutS
 	jmp	TelnOut
 TelDoTTStr:	.byte	255,253,24,0
+
+TelWi_SGA:	ldw	R0,#TelDoSGStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelDoSGStr:	.byte	255,253,3,0
 
 TelWi_:	lda	TelnCC+1
 	sta	TelDotStr+2
@@ -470,14 +489,25 @@ TelWi_:	lda	TelnCC+1
 	jmp	TelnOut
 TelDotStr:	.byte	255,254,0,0
 
-TelWo_Echo:
-TelDn_Echo:	ldb	flgEcho,#1
+TelWo_Echo:	ldb	TelWDEcStr+1,254
+	jmp	TelWD_Echo
+TelDn_Echo:	ldb	TelWDEcStr+1,252
+TelWD_Echo:	ldb	flgEcho,#1
+	jsr	FixEcho
+	ldw	R0,#TelWDEcStr
+	jsr	ComPutS
 	jmp	TelnOut
+TelWDEcStr:	.byte	255,253,1,0
 
 TelDo_TT:	ldw	R0,#TelWiTTStr
 	jsr	ComPutS
 	jmp	TelnOut
 TelWiTTStr:	.byte	255,251,24,0
+
+TelDo_SGA:	ldw	R0,#TelWiSGStr
+	jsr	ComPutS
+	jmp	TelnOut
+TelWiSGStr:	.byte	255,251,3,0
 
 TelDo_:	lda	TelnCC+1
 	sta	TelWotStr+2
@@ -486,9 +516,15 @@ TelDo_:	lda	TelnCC+1
 	jmp	TelnOut
 TelWotStr:	.byte	255,252,0,0
 
-TelWi_Echo:
-TelDo_Echo:	ldb	flgEcho,#0
+TelWi_Echo:	ldb	TelWDEcStr+1,#253
+	jmp	TelW2_Echo
+TelDo_Echo:	ldb	TelWDEcStr+1,#251
+TelW2_Echo:	ldb	flgEcho,#0
+	jsr	FixEcho
+	ldw	R0,#TelWDEcStr
+	jsr	ComPutS
 	jmp	TelnOut
+
 
 MainLp:	mvb	rrate,A5L
 	mvb	txtXY+2,R1H
@@ -509,7 +545,7 @@ MainLp2:	jsr	ComGet
 	lda	#$30
 	sta	$01
 	txa
-	jsr	SPutChar
+	jsr	DrawChar
 	pla
 	sta	$01
 	dec	A5L

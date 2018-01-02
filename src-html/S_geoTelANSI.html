@@ -26,7 +26,7 @@ AnsiBroke:	sty	ansiBuf+26
 	sta	ansiBuf,y
 	mvw	R0,ansiBuf+24
 	ldw	R0,#ansiBuf
-	jsr	PutChar2
+	jsr	DrwStr2
 	mvw	ansiBuf+24,R0
 AnsiOut:	ldy	ansiBuf+26
 	ldb	ansiDex,#0
