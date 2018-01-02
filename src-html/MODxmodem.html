@@ -34,19 +34,37 @@ XMO_PAD	= $1A
 XMO_OTH	= $02
 
 
+;****************************************
+;* XMOrcvChk		X-Modem Receive (checksum)
+;* XMOrcvCrc		X-Modem Receive (CRC-16)
+;* Inputs:
+;*	A2	Vector - Receive a single byte in .a
+;*	A3	Vector - Received a bad block
+;* Outputs:
+;*	.x 	0 means A-OK, or abort/error
+;*
+;********************************
 XMOrcvChk:	ldb	XMOXType,#0
 	ldb	XMOBufSize,#$84
 	jmp	XMOrcvSt
 XMOrcvCrc:	ldb	XMOXType,#1
 	ldb	XMOBufSize,#$85
-XMOrcvSt:	ldb	XMOUpDn,#1
+XMOrcvSt:	mvw	A2,XMOrcVec+1	; receive 1 byte in .a
+	mvw	A3,XMOerVec+1	; receive error block
+	ldb	XMOUpDn,#1
 	jsr	XMOClear
 	jsr	XMOBufFlush
 	inc	XMOBlock
 	lda	XMOXType
-	bne	XMOrcvLp
+	bne	10$
 	lda	#XMO_CNAK
 	jsr	ComSPut
+10$:	jmp	XMOrcvLp
+
+XMORcVec:	jmp	XMONada	; receive 1 byte
+XMOErVec:	jmp	XMONada	; error block receive bytes
+XMONada:	rts	
+
 XMOrcvLp:	lda	XMOErrors
 	cmp	#$0e
 	bcc	11$
@@ -91,29 +109,205 @@ XMOrcvLp:	lda	XMOErrors
 	beq	20$
 	cmp	#XMO_SOH
 	beq	20$
-	jmp	XMOConRcv
-; continued on next page
-
+19$:	jmp	XMOConRcv
 20$:	cpb	XMOBuf+1, XMOBlock
-	bne	XMOConRcv
+	bne	19$
 	eor	#$ff
 	cmp	XMOBuf+1
-	bne	XMOConRcv
+	bne	19$
 	jsr	XMOchkBlk
 	lda	XMOXType
 	bne	22$
 	cpb	XMOChkSum, XMOBufEnd
 	beq	25$
-	jmp	XMOConRcv
+21$:	jmp	XMOConRcv
 22$:	cpb	XMOBufEnd, XMOCrc
-	bne	XMOConRcv
+	bne	21$
 	cpb	XMOBufCrc,XMOCrc+1
-	bne	XMOConRcv
+	bne	21$
 25$:	ldb	XMOGood,#1
+	jmp	XMOConRcv
+
 XMOConRcv:	lda	XMOGood
-	
+	beq	20$
+	ldb	XMOBufCt,#0
+10$:	lda	XMOBufCt,y
+	jsr	XMORcVec
+	inc	XMOBufCt
+	cbi	XMOBufCt,#$80
+	bcc	10$
+	jsr	XMOBufFlush
+	lda	#XMO_ACK
+	jsr	ComSPut
+	inc	XMOBlock
+	jmp	XMOrcvLp
+20$:	lda	XMOAbort
+	beq	XMONoBort
+	jmp	XMOXAbort
+XMONoBort:	jsr	XMOBufFlush
+	jsr	XMOerVec
+	lda	XMOXType
+	bne	30$
+25$:	lda	#XMO_NAK
+	jsr	ComSPut
+	bra	40$
+30$:	lda	XMOBlock
+	cmp	#$02
+	bcs	25$
+	lda	#XMO_CNAK
+	jsr	ComSPut
+40$:	inc	XMOErrors
+	jmp	XMOrcvLp
+
+XMOXRcv:	lda	#XMO_ACK
+	jsr	ComSPut
+	jmp	XMOExit
+
+XMOXAbort:	lda	#$01
+	sta	XMOAbort
+	lda	#XMO_CAN
+	jsr	ComSPut
+	lda	#XMO_CAN
+	jsr	ComSPut
+	lda	#XMO_CAN
+	jsr	ComSPut
+	jmp	XMOExit
+
+XMOExit:	ldx	XMOAbort
+	jsr	XMOClear
+	stx	XMOAbort
+	jsr	XMOBufFlush
+	lda	#0
+	sta	XMOXType
+	sta	XMOUpDn
+	lda	XMOAbort
+	tax
 	rts
 
+
+;****************************************
+;* XMOsend		X-Modem Send
+;* Inputs:
+;*	A2	Vector - Ensure 128 bytes available
+;*	A3	Vector - Send a single byte in .a, .x=no more
+;*	A4	Vector - Sent a bad block
+;* Outputs:
+;*	.x 	0 means A-OK, or abort/error
+;*
+;********************************
+
+XMOsend:	ldb	XMOUpDn,#0
+	jsr	XMOClear
+	jsr	XMOBufFlush
+	jsr	XMOgosCrc
+	mvw	A2,XMOSsVec+1
+	mvw	A3,XMOSnVec+1
+	mvw	A4,XMOErVec+1
+	jmp	XMOsendStart
+
+XMOSsVec:	jmp	XMONada	; prepare 128 bytes
+XMOSnVec:	jmp	XMONada	; send 1 byte
+
+XMOgosChk:	ldb	XMOXType,#$00
+	ldb	XMOBufSize,#$84
+	rts
+XMOgosCrc:	ldb	XMOXType,#$01
+	ldb	XMOBufSize,#$85
+	rts
+
+
+
+XMObuild:	jsr	XMOSsVec
+	ldy	#0
+	sty	XMOIOStat
+	sty	XMOBufCt
+10$:	jsr	XMOSnVec
+	ldy	XMOBufCt
+	sta	XMOBuf3,y
+	stx	XMOIOStat
+	cpx	#0
+	bne	20$
+	inc	XMOBufCt
+	cbi	XMOBufCt,#$80
+	bcc	10$
+	bra	30$
+20$:	inc	XMOBufCt
+	inc	XMOBufCt
+25$:	ldy	XMOBufCt
+	lda	#XMO_PAD
+	sta	XMOBuf3,y
+	inc	XMOBufCt
+	cbi	XMOBufCt,#$80
+	bcc	25$
+30$:	ldb	XMOBuf,#XMO_SOH
+	lda	XMOBlock
+	sta	XMOBuf+1
+	eor	#$ff
+	sta	XMOBuf+2
+	jsr	XMOchkBlk
+	lda	XMOChkSum
+	sta	XMOBufEnd
+	lda	XMOXType
+	beq	XMOcontSend
+	cpb	XMOCrc,XMOBufEnd
+	cpb	XMOCrc+1,XMOBufCrc
+XMOcontSend:	jsr	XMOminFlush
+	ldy	#0
+	sta	XMOBufBit
+50$:	lda	XMOBuf,y
+	jsr	ComSPut
+	ldy	XMOBufBit
+	iny
+	sty	XMOBufBit
+	cpy	XMOBufSize
+	bcc	50$
+	jmp	XMOsendStart
+
+XMOsendStart:	jsr	XMOReTm
+10$:	jsr	XMOChkAbort
+	jsr	XMOChkTm
+	jsr	ComGet
+	bcs	19$
+	cmp	#XMO_NAK
+	beq	33$
+	cmp	#XMO_CNAK
+	beq	32$
+	cmp	#XMO_CAN
+	beq	30$
+	cmp	#XMO_ACK
+	beq	50$
+19$:	cbi	XMOErrors,#$0e
+	beq	30$
+	lda	XMOClock
+	bne	40$
+	bra	10$
+30$:	jmp	XMOXAbort
+32$:	jsr	XMOgosCrc
+	bra	35$
+33$:	jsr	XMOgosChk
+35$:	lda	XMOBlock
+	beq	50$
+40$:	inc	XMOErrors
+	jsr	XMOErVec
+	jsr	XMOPause
+	jmp	XMOcontSend
+50$:	inc	XMOBlock
+	lda	XMOIOStat
+	beq	80$
+	ldy	#0
+70$:	tya
+	pha
+	lda	#XMO_EOT
+	jsr	ComSPut
+	pla
+	tay
+	iny
+	cpy	#$85
+	bne	70$
+	jmp	XMOExit
+80$:	jsr	XMOPause
+	jsr	XMOBufFlush
+	jmp	XMObuild	
 
 XMOClear:	lda	#0
 	sta	XMOBlock
@@ -332,6 +526,7 @@ XMOKeySync:	.block 1
 XMOKeyFree:	.block 1
 XMOXType:	.block 1
 XMOUpDn:	.block 1
+XMOBufCt:	.block 1
 
 XMOBuf:	.block 3
 XMOBuf3:	.block $80
