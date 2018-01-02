@@ -6,13 +6,13 @@
 
 ;*********************************************
 ;* MODreuX - geoProjects library 
-;*          Read and write to REU memory
+;*          Read and write to REU memory bank like a file
 ;*
 ;* Intro:
 ;*     A module for reading and writing to REU
 ;*     memory as a file device, forward and 
-;*     backward, while dynamically finding free
-;*     REU blocks.
+;*     backward, after dynamically checking for
+;*     a free block.
 ;* 
 ;* Functions:
 ;*	OpenRR()  .x error
@@ -44,7 +44,11 @@
 
 
 
-;*	OpenRR() * .x error
+;*****************************
+;* OpenRR	Open buffer for reading.
+;* Outputs:
+;*	.x > 0 for error
+;******************************
 OpenRR:	jsr	REUxVal
 	beq	10$
 	rts
@@ -61,7 +65,13 @@ REUxRChk:	cpb	REUxRPg,REUxWPg
 
 
 
-;*	SeekRR(.word Pointer to read position ) .x error
+;*****************************
+;* SeekRR	Seek to read position
+;* Inputs:
+;*	A2	Pointer to new read positon (0-n)
+;* Outputs:
+;*	.x > 0 for error
+;******************************
 SeekRR:	lda	A2H
 	clc
 	adc	REUxTPg
@@ -71,7 +81,11 @@ SeekRR:	lda	A2H
 
 
 
-;*	SeekRW( ) .x error
+;*****************************
+;* SeekRW	Seek to EOF read position
+;* Outputs:
+;*	.x > 0 for error
+;******************************
 SeekRW:	mvb	REUxWPg,REUxRPg
 	mvb	REUxWDx,REUxRDx
 	beq	20$
@@ -147,7 +161,13 @@ REUxFtc1:	lda	#0
 	rts
 
 
-;*	GetRByte()	.a	byte read in, .x error
+;*****************************
+;* GetRByte	Read byte from open buffer
+;* Inputs:
+;* Outputs:
+;*	.a	byte read
+;*	.x > 0 for error
+;******************************
 GetRByte:	sty	GetROt+1
 	jsr	REUxGet
 	bne	GetROt
@@ -177,7 +197,13 @@ REUxFGt:	lda	REUxBlk,y
 	ldx	#0
 	rts	
 
-;*	GetRevB() .a byte read in, .x error
+;*****************************
+;* GetRevB	Read byte, go backwards
+;* Inputs:
+;* Outputs:
+;*	.a	byte read in
+;*	.x > 0 for error
+;******************************
 GetRevB:	sty	GetRvOt+1
 	jsr	REUxGet
 	bne	GetRvOt
@@ -197,7 +223,12 @@ GetRevB:	sty	GetRvOt+1
 GetRvOt:	ldy	#0
 	rts
 
-;*	CreatRW() * .x error
+;*****************************
+;* CreatRW	Create/Reset write buffer
+;* Inputs:
+;* Outputs:
+;*	.x > 0 for error
+;******************************
 CreatRW:	jsr	REUxVal
 	beq	10$
 	rts
@@ -208,7 +239,13 @@ REUxWChk:	ldx	#0
 	rts
 
 
-;*	PutRByte(.a	Byte to write out) *
+;*****************************
+;* PutRByte	Write to open write buffer
+;* Inputs:
+;*	.a	Byte to write out
+;* Outputs:
+;*	(no error, as buffer is a loop)
+;******************************
 PutRByte:	sty	PutROt+1
 	pha
 	.byte	$a9	; lda immediate
@@ -237,6 +274,11 @@ PutROt:	ldy	#0
 	rts
 
 
+;*****************************
+;* FlushR	Flush written bytes to REU
+;* Inputs:
+;* Outputs:
+;******************************
 ;*	FlushR(	)
 FlushR:	lda	REUxCPg
 	jmp	REUxFtch	

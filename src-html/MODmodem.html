@@ -6,7 +6,8 @@
 
 ;*********************************************
 ;* MODmodem - geoProjects library 
-;*              adapted from commLib2.bin by Ilker Ficicilar
+;*		written by Bo Zimmerman
+;*		adapted from commLib2.bin by Ilker Ficicilar
 ;*
 ;* Intro:
 ;*     A module for reading and writing to an RS-232 
@@ -207,9 +208,7 @@ ComEnable:	jsr CLL2_0N
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	lda	#0	; **BZ:DELME
-	rts
-	lda	$01
+ComOnline:	lda	$01
 	pha
 	lda	#$35
 	sta	$01

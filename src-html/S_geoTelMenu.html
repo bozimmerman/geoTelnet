@@ -1,4 +1,12 @@
 <!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+;*****************************
+;* S/geoTelMenu
+;* (c) 2017 Bo Zimmerman
+;*
+;* Menu creation and data
+;* Screen save and restore
+;* Buffer, Term option handlers
+;*****************************
 .noeqin
 .include	GEOSequates
 .glbl
@@ -6,6 +14,8 @@
 
 
 .psect
+
+
 
 ScreenBack:	ldb	flgDoBg,#0
 	ldw	R0,#SCREEN_BASE+(16*40)
@@ -572,7 +582,7 @@ FixBaud:	ldx	#0
 20$:	lda	CLL2Baud
 	add	#1
 	asl	a
-	sta	rrate
+	sta	mdmRdRate
 	lda	CLL2Baud
 	jsr	GetBaudPtr
 	mvw	A0,Menu03b

@@ -1,4 +1,27 @@
 <!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+;*****************************
+;*
+;*           geoTelnet
+;*	(c) 2017 Bo Zimmerman
+;*
+;*  Started August, 2017
+;*  Completed December, 2017
+;*
+;* Special thanks to Carlos Santiego
+;*****************************
+
+;*****************************
+;* S/geoTelnet
+;* (c) 2017 Bo Zimmerman
+;*
+;* Includes:
+;*  Initialization of screen, modem
+;*  Low level Char drawing
+;*  Low level screen manipulation
+;*  Key and Modem input handling
+;*  Telnet Code parsing, handling
+;*****************************
+
 .if Pass1
 .noeqin
 .noglbl
@@ -10,6 +33,8 @@
 curWidth = $8807
 
 .psect
+
+
 StartTelnet:	jsr	CreatRW
 	stx	BuffEnable
 	jsr	scnSetup
@@ -27,6 +52,7 @@ CleanExit:	jsr	PromptOff
 	jsr	mdmDone
 	jsr	SavColorScn	; restores origColor
 	jmp	EnterDeskTop
+
 
 scnSetup:	ldb	txtTop,#$10	; screen def
 	ldb	txtBot,#199
@@ -89,7 +115,7 @@ FixFont80:	ldw	R0,#GEOSFont
 	ldb	curWidth,#$04	; curWidth=realSize
 	rts
 
-AboutStrs:	.byte	24,"      geoTelnet beta1",0
+AboutStrs:	.byte	24,"      geoTelnet 1.0",0
 	.byte	24,"  For C64Net WiFi Modem",0
 	.byte	24,"    By Bo Zimmerman",0
 	.byte	24,"      bo@zimmers.net",0
@@ -249,7 +275,7 @@ DrawChar:	pha
 	.byte	$8d	; sta
 colorPtr:	.word COLOR_MATRIX
 	lda	R11L
-	and	#$04
+	and	#$04	; even works on 8-pt fonts!
 	bne	10$
 	inw	colorPtr
 10$:	inc	flgDoBg
@@ -417,7 +443,6 @@ TelnAct:	iny
 	sta	TelNDo+2
 	ldb	telnState,#0
 TelnDo:	jmp	TelnDo
-
 
 
 	; initial state machine
@@ -590,7 +615,7 @@ QFlush:	lda	OutBuf
 	
 
 
-MainLp:	mvb	rrate,A5L
+MainLp:	mvb	mdmRdRate,A5L
 	mvb	txtXY+2,R1H
 	mvw	txtXY,R11
 MainLp2:	jsr	ComGet
@@ -640,17 +665,17 @@ BufferFlg:	.byte 0
 	rts
 
 
-txtTop:	.byte	$10
-txtBot:	.byte	199
-txtLeft:	.word	0
-txtRight:	.word	319
-txtBEnd:	.byte	199
+txtTop:	.byte	$10	; first pixel row of terminal
+txtBot:	.byte	199	; last pixel row of terminal
+txtLeft:	.word	0	; leftmost pixel col of term
+txtRight:	.word	319	; rightmost pixel col of term
+txtBEnd:	.byte	199	; 
 txtREnd:	.word	312
 telnStPt:	.byte	0	; combines with state as ptr
 telnState:	.byte	0	; combines with above as ptr
 
 .ramsect
-rrate:	.block	1
+mdmRdRate:	.block	1
 savKeyVec:	.block	2
 txtXY:	.block	3
 flgDoBg:	.block	1
