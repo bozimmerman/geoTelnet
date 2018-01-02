@@ -1,0 +1,22 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+.if Pass1
+.include GEOSequates
+.endif
+
+
+.psect
+
+Main:	jsr	i_InitVPrg
+	.word PermName
+	cpx	#0
+	beq	10$
+	jmp	EnterDeskTop
+10$:	jsr	i_LdMod
+	.byte	1
+	jmp	VPRGbase
+
+PermName:	.byte "geoTelnet   1.0 ",0
+
+
+
+</pre></body></html>

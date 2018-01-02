@@ -1,0 +1,45 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+;*****************************
+;*
+;*      geoTelnet
+;*
+;*      (C) 2017 Bo Zimmerman
+;*
+;*****************************
+.noglbl
+.noeqin
+.if 	Pass1
+.include	GEOSequates
+.endif
+.glbl
+.eqin
+
+
+
+	.header		;start of header section
+
+	.word	0	;first two bytes = 0
+	.byte	3		;width in bytes
+	.byte	21	;and height in scanlines of:
+	.byte	$80 | 3	;Commodore type, bit 7 S
+	.byte	APPLICATION	;Geos file type
+	.byte	VLIR	;Geos file structure type
+	.word	Main	;load address of program 
+	.word	$3ff	;end address, needed for
+				;desk accessories.
+	.word	Main	;init address of program
+	.byte	"geoTelnet   1.0 ",0,0,0,$80
+			;perm. filename 12 chars,
+			;4 char version number,
+			;3 zeroes,
+			;40/80 column flag.
+	.byte	"Bo Zimmerman       ",0
+			;19 character author name
+
+	;end of header section which is checked for accuracy
+	.block	160-117	;skip 43 bytes...
+	.byte	"Telnet for C64Net WiFi Modem.",0
+	.endh
+
+
+</pre></body></html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+;*****************************
+;*
+;*      geoTelnet
+;*
+;*      (C) 2017 Bo Zimmerman
+;*
+;*****************************
+.output	geoTelnet
+.header	H/geoTelnet.rel
+
+.vlir
+
+.psect	$0400
+
+S/geoTelStub.rel
+APIcommon.rel
+MODscrn.rel
+MODdaAB.rel
+MODvPrg.rel
+
+.mod	1
+.psect	VPRGbase
+S/geoTelnet.rel
+S/geoTelMenu.rel
+S/geoTelConn.rel
+F/geoTelnet.rel
+MODmodem.rel
+
+
+
+</pre></body></html>

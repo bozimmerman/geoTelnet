@@ -1,0 +1,33 @@
+geoModules (C)2017 Bo Zimmerman
+Please read the LICENSE file for license information
+Please read the NOTICE file for credits information
+Home Page: http://www.zimmers.net/geos/
+
+geoTelnet is an ansi terminal program for connecting to telnet servers.  It is compatible with the following operating systems: GEOS 64 2.0, GEOS 128 2.0, Wheels 64 4.0+, Wheels 128 4.0+, MegaPatch 3.0 64, MegaPatch 3.0 128, gateWay 64, and gateWay 128.  It requires a 40 column composite monitor, C64Net WiFi Modem, disk drive, and mouse or joystick. A GEOS compatible ram expansion unit (REU) is optional, but beneficial.
+
+The C64Net WiFi Modem can be constructed from schematics by going to:
+http://coffeemud.net:8080/ctcug/index.php/Inexpensive_Wireless_Internet_Modem
+It can also be purchased from:
+https://electronicsisfun.com/c64net-wifi
+
+Features include:
+80 column text output in a 40 column monitor screen.
+ANSI X3.64 terminal support, or as much I could manage.
+ASCII terminal support (no Extended ASCII)
+TELNET code support.
+Native support for 300-4800 baud (up to 7200 for SuperCPU enhanced systems)
+desk accessory access
+internal Phonebook for storing favorite telnet hosts
+quick connect option
+Echo (duplex) toggle, and on-the-fly term-type changing.
+X-Modem upload and download.
+64K input buffer support, with LOAD, SAVE (as ANSI or PETSCII), DUMP, and VIEW.
+
+Building:
+geoTelnet was built using Concept for Wheels 64.  It might also build using geoProgrammer, but hasn't been tested.
+
+In addition to the given source, you'll require several components from the geoModules project:
+https://github.com/bozimmerman/geoModules
+
+You can link directly from the given object code, or built from scratch, provided the necessary geoModules include files and object files are present, and the F/geoTelnet.rel font file.
+

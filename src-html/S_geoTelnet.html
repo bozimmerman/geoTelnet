@@ -1,0 +1,486 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+.if Pass1
+.noeqin
+.noglbl
+.include GEOSequates
+.eqin
+.glbl
+.endif
+
+
+.psect
+
+	jsr	scnSetup
+	ldb	flgEcho,#1
+	jsr	FixEcho
+	jsr	mdmSetup
+	jsr	FixBaud
+	jsr	keySetup
+	rts
+CleanExit:	jsr	PromptOff
+	jsr	keyRestore
+	jsr	mdmDone
+	jsr	SavColorScn	; restores origColor
+	jmp	EnterDeskTop
+
+scnSetup:	lda	#0
+	sta	ansiDex
+	sta	ansiNBuf
+	jsr	SetPattern
+	ldb	R2L,#0
+	ldb	R2H,#199
+	ldw	R3,#0
+	ldw	R4,#319
+	jsr	Rectangle
+	jsr	UseSystemFont	; * for now
+	ldw	A2,#0	; "About" refresh
+	ldw	A3,#DAdone	; DA refresh
+	ldw	A4,#DAinit	; DA init
+	ldw	A5,#AboutStrs
+	jsr	InitDaAb
+	ldb	dispBufferOn,#ST_WR_FORE
+	jsr	DrawMenu
+	jsr	FixFont80
+	ldw	txtXY,#$0
+	ldb	txtXY+2,#$10
+	mvb	COLOR_MATRIX,origColor
+	ldb	baseColor,#(7*16)	; yellow on black
+	mvb	baseColor,curColor
+	ldw	colorLPtr,#COLOR_MATRIX+(40*2)
+	mvw	colorLPtr,colorPtr
+	ldb	colorHalf,#1
+	mvw	colorLPtr,R1	; set initial scrn color
+	ldw	R0,#$3e8-(40*2)
+	mvb	baseColor,R2L
+	jsr	FillRam	; color the term screen
+	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+	ldb	windowTop,#0
+	ldb	windowBottom,#199
+	ldw	leftMargin,#0
+	ldw	rightMargin,#319
+	rts
+
+FixFont80:	ldw	R0,#GEOSFont
+	jsr	LoadCharSet
+	ldb	baselineOffset,#0
+	ldb	$8807,#$04	; $8807=realSize
+	rts
+
+AboutStrs:	.byte	24,"      geoTelnet v1.0",0
+	.byte	24,"  For C64Net WiFi Modem",0
+	.byte	24,"    By Bo Zimmerman",0
+	.byte	24,"      bo@zimmers.net",0
+
+mdmSetup:	ldb	A2L,#>CLBuf	; input buffer
+	ldb	A2H,#CLBfLen	; input buffer len pages
+	ldb	A3L,#$01	; 1200 baud
+	ldb	A3H,#$80	; RTSCTS Flow Control!
+	jsr	ComInit
+	ldw	R0,#mdmInitStr
+	jsr	ComPutS
+	rts
+
+mdmDone:	jsr	ComDisable
+	jsr	ComUninst
+	rts
+
+mdmInitStr:	.byte 13,"  atze0v1x1f0q0r0&p0i0",13,0
+mdmDoneStr:	.byte 13,"  atzb1200",13,0
+
+
+ComPutS:	ldy	#0
+10$:	lda	(R0),y
+	beq	20$
+	jsr	ComSPut
+	iny
+	bne	10$
+20$:	rts
+
+
+
+keySetup:	mvw	keyVector,savKeyVec
+	sei
+	ldw	keyVector,#KeyPRtn
+	ldw	intBotVector,#MainLp
+	cli
+	ldy	curHeight
+	dey
+	tya	
+	jsr	InitTextPrompt
+	mvw	txtXY,stringX
+	mvb	txtXY+2,stringY
+	jsr	PromptOn
+	rts
+
+keyRestore:	sei
+	ldw	intBotVector,#0
+	mvw savKeyVec,keyVector
+	cli
+	jsr	PromptOff
+	rts
+
+KeyPRtn:	lda	keyData
+	beq	99$
+	cmp	#$1d
+	bne	10$
+	lda	#$08
+10$:	ldx	flgEcho
+	beq	30$
+	pha
+	jsr	SafePutC
+	pla
+30$:	pha
+	jsr	ComSPut	; send to modem
+	pla
+	cmp	#3	; !
+	bne	20$	; *** DELME LATER
+	jmp	CleanExit
+20$:	; ** xlate if necc
+	; ** send it to the modem
+	; ** if local echo, also screen
+99$:	rts
+
+
+
+PutChars:	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+PutChar2:	mvw	R0,PutCharLp+3
+PutCharLp:	ldy	#0
+	lda	$9999
+	beq	30$
+20$:	jsr	SPutChar
+	inw	PutCharLp+3
+	bra	PutCharLp	
+30$:	mvw R11,txtXY
+	mvb	R1H,txtXY+2
+	rts
+
+SafePutC:	pha
+	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+	pla
+	jsr	SPutChar
+	mvw R11,txtXY
+	mvb	R1H,txtXY+2
+	rts
+
+SPutChar:	cmp	#27
+	bne	10$
+	jmp	AnsiStart
+10$:	pha
+	lda	ansiDex
+	beq	11$
+	pla
+	jmp	AnsiCont
+11$:	pla
+	cmp	#$0d
+	bne	13$
+	jmp	PutLine
+13$:	cmp	#$08
+	bne	20$
+	jmp	PutDel
+20$:	cmp	#$20
+	bcs	30$
+29$:	rts
+30$:	jsr	PutChar
+	lda	curColor
+	.byte	$8d	; sta
+colorPtr:	.word COLOR_MATRIX
+	dec	colorHalf
+	beq	10$
+	ldb	colorHalf,#1
+	inw	colorPtr
+10$:	ldb	flgDoBg,#1
+	cwi	R11,#319
+	bcs	PutLine
+	rts
+
+
+PutLine:	ldw	R11,#0
+	ldb	colorHalf,#1
+	adb	curHeight,R1H
+	cbi	R1H,#193
+	bcs	10$
+	avw	#40,colorLPtr
+	mvw	colorLPtr,colorPtr
+	jsr	ClrColLn
+	rts
+10$:	sbb	curHeight,R1H
+	mvw	colorLPtr,colorPtr
+	ldw	R0,#SCREEN_BASE+(24*40)
+	ldw	R1,#SCREEN_BASE+(16*40)
+	ldw	R2,#$1f3f-(24*40)
+	jsr	MoveData
+	ldw	R0,#COLOR_MATRIX+(3*40)
+	ldw	R1,#COLOR_MATRIX+(2*40)
+	ldw	R2,#$03e7-(3*40)
+	jsr	MoveData
+	ldw	R1,#SCREEN_BASE+$1f3f-(8*40)
+	ldw	R0,#8*40
+	ldb	R2L,#0
+	jsr	FillRam
+	ldw	R1,#BACK_SCR_BASE+$1f3f-(8*40)
+	ldw	R0,#8*40
+	ldb	R2L,#0
+	jsr	FillRam
+	ldb	flgDoBg,#1
+	ldb	R1H,#192	; 199-8?
+	jsr	ClrColLn
+	rts
+
+ClrColLn:	tya
+	pha
+	mvw	colorLPtr,R0
+	ldy	#0
+	lda	baseColor
+10$:	sta	(R0),y
+	iny
+	cpy	#40
+	bcc	10$
+	pla
+	tay
+	rts
+
+PutDel:	dec	colorHalf
+	beq	10$
+	ldb	colorHalf,#1
+10$:	cwi	R11,#3
+	bcs	15$
+	ldw	R11,#319
+	ldb	colorHalf,#0
+	cbi	R1H,#$20
+	bcc	15$
+	sbb	curHeight,R1H
+	svw	#40,colorLPtr
+	mvw	colorLPtr,colorPtr
+	avw	#40,colorPtr
+15$:	sbw	$8807,R11	; realSize, #$04
+	lda	#$20
+	jsr	PutChar
+	sbw	$8807,R11
+	dew	colorPtr
+	ldb	flgDoBg,#1
+	rts
+
+
+AnsiStart:	lda	#1
+	sta	ansiDex
+	ldb	ansiNBuf,#0
+	ldb	ansiNflg,#0
+	rts
+
+AnsiBroke:	sty	ansiBuf+26
+	ldy	ansiDex
+	lda	#0
+	sta	ansiBuf,y
+	mvw	R0,ansiBuf+24
+	ldw	R0,#ansiBuf
+	jsr	PutChar2
+	mvw	ansiBuf+24,R0
+AnsiOut:	ldy	ansiBuf+26
+	ldb	ansiDex,#0
+	ldb	ansiNBuf,#0
+	ldb	ansiNflg,#0
+	rts
+
+
+
+AnsiCont:	sty	ansiBuf+26
+	ldy	ansiDex
+10$:	dey
+	sta	ansiBuf,y
+	inc	ansiDex
+	cpy	#23
+	bcc	11$
+	ldy	ansiBuf+26
+	jmp	AnsiBroke
+11$:	ldy	ansiBuf+26
+	cmp	#109	; char 'm'
+	bne	30$
+	jmp	AnsiDone
+30$:	cmp	#91	; char '['
+	bne	33$
+	lda	ansiDex
+	cmp	#2
+	beq	32$
+31$:	jmp	AnsiBroke
+32$:	rts	
+33$:	cmp	#59	; char ';'
+	bne	35$
+	ldb	ansiNflg,#0
+	rts
+35$:	cmp	#48	; char '0'
+	bcc	31$
+	cmp	#58	; char ':'
+	bcs	31$
+	sec		; math is hard
+	sbc	#48
+	pha
+	lda	ansiNflg
+	bne	40$
+	pla		; first digit, just store
+	inc	ansiNBuf	; first of digit means 1 digit
+	ldy	ansiNBuf
+	sta	ansiNBuf,y
+	inc	ansiNflg
+	ldy	ansiBuf+26
+	rts
+40$:	ldy	ansiNBuf	; next digit,mul x 10
+	lda	ansiNBuf,y
+	pha
+	asl	a
+	asl	a	; mul by 8
+	asl	a
+	sta	ansiNBuf,y
+	pla
+	pha
+	clc
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	pla
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	pla		; the new digit
+	adc	ansiNBuf,y
+	sta	ansiNBuf,y
+	ldy	ansiBuf+26
+	rts
+
+AnsiDone:	lda	ansiNBuf
+	bne	10$	
+	jmp	AnsiOut
+10$:	cmp	#1	; is simple code?
+	bne	20$
+	lda	ansiNBuf+1
+	; ** do bold, etc
+	jmp	AnsiOut
+20$:	lda	ansiNBuf+1	; is it the reset code?
+	bne	30$
+	lda	ansiNBuf+2
+	bne	30$
+	mvb	baseColor,curColor	
+	ldb	currentMode,#0	; * reset achieved!
+	jmp	AnsiOut
+30$:	ldy	#1
+	sty	AnsiLp+1
+	sty	AnsiBflg
+AnsiLp:	ldy	#1
+	dey
+	cpy	ansiNBuf
+	bcc	10$
+	jmp	AnsiOut
+10$:	inc	AnsiLp+1
+	lda	ansiNBuf+1,y
+	cmp	#1
+	bne	20$
+	ldb	AnsiBflg,#0
+	jmp	AnsiLp
+20$:	cmp	#30
+	bcs	31$
+	jmp	AnsiLp
+31$:	cmp	#38
+	bcs	40$
+	jmp	AnsiChCol	; * its a char color!
+40$:	cmp	#40
+	bcs	42$
+41$:	jmp	AnsiLp
+42$:	cmp	#50
+	bcs	41$
+	jmp	AnsiBgCol	; * its a bg color
+
+
+
+AnsiChCol:	sec
+	sbc	#30
+	pha		; * its a char color!
+	lda	ansiBflg
+	bne	32$
+	pla
+	tay
+	lda	AnsiChC1,y
+	bra	33$
+32$:	pla
+	tay
+	lda	AnsiChC2,y
+33$:	pha
+	lda	curColor
+	and	#$0f	; char colors up top
+	sta	curColor
+	pla
+	clc
+	adc	curColor
+	sta	curColor
+	jmp	AnsiLp
+
+AnsiBgCol:	sec
+	sbc	#40
+	tay		; * its a bg char color!
+	lda	AnsiBgC1,y
+	pha
+	lda	curColor
+	and	#$f0
+	sta	curColor
+	pla
+	clc
+	adc	curColor
+	sta	curColor
+	jmp	AnsiLp
+
+AnsiChC1:	.byte	11*16,10*16,13*16, 7*16,14*16, 4*16, 3*16, 1*16
+AnsiChC2:	.byte 0*16,2*16, 5*16, 9*16, 6*16,	 4*16,12*16, 15*16
+AnsiBgC1:	.byte	0,2,5,7,6,4,3,7,0,0
+
+MainLp:	mvb	rrate,A5L
+	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+MainLp2:	jsr	ComGet
+	bcc	20$
+	lda	flgDoBg
+	beq	10$
+	mvb	R11,stringX
+	mvb	R1H,stringY
+	jsr	PromptOn
+10$:	mvb	R1H,txtXY+2
+	mvw	R11,txtXY
+	rts
+20$:	tax
+	lda	$01
+	pha
+	lda	#$30
+	sta	$01
+	txa
+	jsr	SPutChar
+	pla
+	sta	$01
+	dec	A5L
+	beq	30$
+	jmp	MainLp2
+30$:	mvb	R1H,txtXY+2
+	mvw	R11,txtXY
+	rts
+
+
+CLBfLen 	= 4		; buffer because not 0 aligned
+CLBuf	= $5c00
+
+.ramsect
+rrate:	.block 1
+savKeyVec:	.block 2
+txtXY:	.block 3
+flgDoBg:	.block 1
+flgEcho:	.block 1
+origColor:	.block 1
+baseColor:	.block 1
+curColor:	.block 1
+colorLPtr:	.block 2
+colorHalf:	.block 1
+colorBBuf:	.block $03e9-(40*2)
+ansiDex:	.block 1
+ansiBuf:	.block 32
+ansiNBuf:	.block 5
+ansiNflg:	.block 1
+ansiBflg:	.block 1
+; that's all folks!
+
+</pre></body></html>

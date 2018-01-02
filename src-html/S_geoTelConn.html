@@ -1,0 +1,389 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+.noeqin
+.include	GEOSequates
+.glbl
+.eqin
+
+
+.psect
+
+
+
+QConnect:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	ldw	A2,#NewHost
+	ldy	#0
+	tya
+09$:	sta	(A2),y
+	iny
+	cpy	#$50
+	bcc	09$
+	ldw	R0,#QConnDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$02
+	beq	30$
+	lda	NewHost
+	beq	30$
+	mvb	baseColor,curColor
+	ldw	R0,#QConnCmd
+	jsr	ComPutS
+	ldw	R0,#QConnCmd
+	jsr	PutChars
+	ldw	R0,#NewHost
+	jsr	ComPutS
+	ldw	R0,#NewHost
+	jsr	PutChars
+	ldw	R0,#QConnRcm
+	jsr	ComPutS
+	ldw	R0,#QConnRcm
+	jsr	PutChars
+30$:	jsr	keySetup
+	jmp	ResColorScn
+	
+QConnCmd:	.byte	13,"atdt",34,0
+QConnRcm:	.byte 34,13,0
+
+QConnDat:	.byte	$01	; size flag, and shadow pattern
+	.byte	$1f,$64,$36,$00,$14,$01	; dialog box dimensions
+	.byte	$0b,$1c,$0f	; static text
+	.word QCPhbTxt00
+	.byte	$01,$03,$2c	; OK button
+	.byte	$02,$14,$2c	; CANCEL button
+	.byte	$0d,$0f,$1b	; input text
+	.byte	$70,$50	; buffer vec, max bytes
+	.byte	$13	; all external dialog gfx
+	.word QCDlgGfx
+	.byte	$00	; end of table
+QCPhbTxt00:	.byte	$18,"Enter the host:port to connect",27,0
+QCDlgGfx:	jsr	i_GraphicsString	; i_GraphicsString
+	.byte	$01,$41,$00,$37	; MOVEPENTO Xl,Xh,Y
+	.byte	$07,$0a,$01,$46	; FRAME_RECTO  Xl,Xh,Y
+	.byte	$00	; end of table
+	rts
+
+
+QConnPhb:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+10$:	ldw	PhPage,#0
+	ldw	R0,#QPhbDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$14
+	bne	20$
+	jsr	NewPhb
+	bra	10$
+20$:	jsr	keySetup
+	jmp	ResColorScn
+
+QPhbDat:	.byte	$01	; size flag, and shadow pattern
+	.byte	$1f,$a9,$36,$00,$08,$01	; dialog box dimensions
+	.byte	$05,$14,$19	; OPEN button
+	.byte	$02,$14,$74	; CANCEL button
+	.byte	$0b,$0b,$0c	; static text
+	.word PhbTxt00
+	.byte	$12,$14,$5d	; user clickbox
+	.word PhbI00
+	.byte	$12,$14,$2f	; user clickbox
+	.word PhbI01
+	.byte	$12,$14,$46	; user clickbox
+	.word PhbI02
+	.byte	$12,$05,$74	; user clickbox
+	.word PhbI03
+	.byte	$13	; all external dialog gfx
+	.word PhbGfx
+	.byte	$00	; end of table
+PhbTxt00:	.byte	$18,"Telnet Server Phonebook",27,0
+PhbGfx:	jsr	$c1a8	; i_GraphicsString
+	.byte	$01,$3d,$00,$30	; MOVEPENTO Xl,Xh,Y
+	.byte	$07,$ca,$00,$a3	; FRAME_RECTO  Xl,Xh,Y
+	.byte	$01,$3e,$00,$92	; MOVEPENTO Xl,Xh,Y
+	.byte	$02,$ca,$00,$92	; LINETO Xl,Xh,Y
+	.byte	$00	; end of table
+	jsr	FillPhPg
+	rts
+
+
+PhbI00:	.word PhbImg00	; pointer to graphics data
+	.word $ffff
+	.byte	$06,$10	; pic width and height
+	.word PhbR00
+PhbR00:	lda	#$14	; sysDBData code
+	sta	sysDBData
+	jmp	RstrFrmDialogue	; RstrFrmDialogue
+PhbI01:	.word PhbImg01	; pointer to graphics data
+	.word $ffff
+	.byte	$06,$10	; pic width and height
+	.word PhbR01
+PhbR01:	lda	#$15	; sysDBData code
+	sta	sysDBData
+	jmp	RstrFrmDialogue	; RstrFrmDialogue
+PhbI02:	.word PhbImg02	; pointer to graphics data
+	.word $ffff
+	.byte	$06,$10	; pic width and height
+	.word PhbR02
+PhbR02:	lda	#$16	; sysDBData code
+	sta	sysDBData
+	jmp	RstrFrmDialogue	; RstrFrmDialogue
+PhbI03:	.word PhbImg03	; pointer to graphics data
+	.word $ffff
+	.byte	$0b,$10	; pic width and height
+	.word PhbR03
+PhbR03:	lda	#$17	; sysDBData code
+	sta	sysDBData
+	jmp	RstrFrmDialogue	; RstrFrmDialogue
+
+
+PhbImg00:
+<img src="00065.png" />PhbImg01:
+<img src="00066.png" />PhbImg02:
+<img src="00067.png" />PhbImg03:
+
+; thats all the bitmaps!
+
+NewPhb:	ldw	A2,#NewName
+	ldy	#0
+	tya
+09$:	sta	(A2),y
+	iny
+	cpy	#EndOfNames-NewName+1
+	bcc	09$
+	ldw	R0,#NPhbDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$02
+	beq	30$
+	lda	NewName
+	beq	30$
+	ldw	A2,#NewHost
+	ldw	R0,#QConnDat
+	jsr	DoDlgBox	; call DoDlgBox and leave!
+	lda	sysDBData
+	cmp	#$02
+	beq	30$
+	lda	NewHost
+	beq	30$
+	jsr	MkNewHost
+30$:	rts
+
+NPhbDat:	.byte	$01	; size flag, and shadow pattern
+	.byte	$1f,$64,$36,$00,$14,$01	; dialog box dimensions
+	.byte	$0b,$1c,$0f	; static text
+	.word NPhbTxt00
+	.byte	$01,$03,$2c	; OK button
+	.byte	$02,$14,$2c	; CANCEL button
+	.byte	$0d,$0f,$1b	; input text
+	.byte	$70,$50	; buffer vec, max bytes
+	.byte	$13	; all external dialog gfx
+	.word QCDlgGfx
+	.byte	$00	; end of table
+NPhbTxt00:	.byte	$18,"Enter a name for this connection",27,0
+
+
+MkNewHost:
+	jsr	FirstPhNm
+10$:	lda	R0H
+	bne	15$
+	jmp	MkNewHBlk
+15$:	ldy	#0
+	lda	(R0),y
+	bne	20$
+	jsr	NextPhNm
+	bra	10$
+20$:	ldw	R1,#NewName
+	ldy	#0
+21$:	lda	(R1),y
+	sta	(R0),y
+	beq	22$
+	inw	R0
+	inw	R1
+	bra	21$
+22$:	inw	R0
+	ldw	R1,#NewHost
+23$:	lda	(R0),y
+	sta	(R1),y
+	beq	25$
+	inw	R0
+	inw	R1
+	bra	23$
+25$:	mvw	PhPgTnS,R1
+	ldw	R4,#PhPgBlk
+	jsr	PutBlock
+	rts
+
+
+MkNewHBlk:	lda	PhPgBlk
+	beq	10$
+	rts
+10$:	mvw	PhPgTnS,APITemp1
+	jsr	GetDirHead
+	ldw	PhPgTnS,#0
+	ldw	R2,#1
+	ldw	R6,#PhPgTnS
+	jsr	BlkAlloc
+	lda	PhPgTnS
+	bne	20$
+19$:	rts
+20$:	jsr	PutDirHead
+	mvw	PhPgTnS,PhPgBlk
+	mvw	APITemp1,R1
+	ldw	R4,#PhPgBlk
+	jsr	PutBlock
+	cpx	#0
+	bne	19$
+	ldy	#0
+	tya
+30$:	sta	PhPgBlk,y
+	iny
+	bne	30$
+	ldb	PhPgBlk+1,#$ff
+	mvw	PhPgTns,R1
+	ldw	R4,#PhPgBlk
+	jsr	PutBlock
+	rts	
+
+FillPhPg:	lda	#0
+	jsr	SetPattern
+	jsr	i_Rectangle
+PhPgDims:	.byte	$31,$90
+	.word $003e,$00c9
+	ldy	#5
+10$:	lda	windowTop,y
+	sta	WinSave,y
+	lda	PhPgDims,y
+	sta	windowTop,y
+	dey
+	bpl	10$
+	
+	mvb	PhPgDims,R1H
+	avb	#$07,R1H
+20$:	mvb	R1H,R10H
+	jsr	NextPhNm	; get phone number
+	lda	R0H
+	beq	30$	; flag as err or eof
+	mvb	R10H,R1H
+	ldw	R11,#$003f
+	jsr	PutString
+	avb	#$09,R1H
+	cpb	R1H,PhPgDims+1
+	bcc	20$
+30$:
+	ldy	#5
+90$:	lda	WinSave,y
+	sta	windowTop,y
+	dey
+	bpl	90$
+	rts
+
+NextPhNm:	ldw	R0,#0
+	lda	PhPage
+	ora	PhPage+1
+	bne	10$
+	jmp	FirstPhNm
+10$:	lda	PhPage+1
+	cmp	#170
+	bcs	20$
+	add	#84
+	sta	PhPage+1
+	jmp	PhMkR0
+20$:	lda	PhPgBlk
+	bne	30$
+	rts		; no more pages!
+30$:	mvw	PhPgBlk,PhPgTnS
+	inc	PhPage
+	jmp	NewPgPh
+
+
+FirstPhNm:	ldw	PhPage,#0
+	ldw	R0,#0
+	lda	VPRGtabl+30
+	bne	10$
+	jsr	MkPhBook
+	beq	10$
+	rts
+10$:	jsr	PhRdSetup
+	beq	15$
+	rts
+15$:	mvw	VPRGtabl+30,PhPgTnS
+	ldb	PhPage,#0
+NewPgPh:	mvw	PhPgTns,R1
+	ldw	R4,#PhPgBlk
+	jsr	GetBlock
+	cpx	#0
+	beq	20$
+	rts
+20$:	ldb	PhPage+1,#2
+	jsr	PhMkR0
+	rts
+
+PhMkR0:	ldw	R0,#PhPgBlk
+	lda	R0L
+	clc
+	adc	PhPage+1
+	sta	R0L
+	lda	R0H
+	adc	#0
+	sta	R0H
+	rts
+
+PhRdSetup:	lda	VPRGdriv
+	jsr	VPRGdev
+	jsr	VPRGok
+	cpx	#0
+	rts
+
+
+
+MkPhBook:	jsr	PhRdSetup
+	beq	10$
+	rts
+10$:	jsr	GetDirHead
+	ldw	PhPgTnS,#0
+	ldw	R2,#1
+	ldw	R6,#PhPgTnS
+	jsr	BlkAlloc
+	lda	PhPgTnS
+	bne	20$
+	ldx	#1
+	rts
+20$:	jsr	PutDirHead
+	mvw	PhPgTnS,fileHeader+34
+	mvw	PhPgTnS,VPRGtabl+30
+	mvw	VPRGtns,R1
+	ldw	R4,#fileHeader
+	jsr	PutBlock
+	cpx	#0
+	beq	30$
+25$:	ldw	VPRGtns,#0
+	ldw	VPRGtabl+30,#0
+	ldx	#1
+	rts
+30$:	ldy	#0
+	tya
+31$:	sta	PhPgBlk
+	iny
+	bne	31$
+	ldb	PhPgBlk+1,#$ff
+	mvw	VPRGtns,R1
+	ldw	R4,#PhPgBlk
+	jsr	PutBlock
+	cpx	#0
+	bne	25$
+	rts
+
+.ramsect
+NewName:	.block 30
+NewHost:	.block 63
+EndOfNames:	.block 1
+WinSave:	.block 6
+PhPage:	.block 2
+PhPgTnS:	.block 2
+PhPgBlk:	.block 256
+
+
+
+</pre></body></html>

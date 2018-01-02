@@ -1,0 +1,430 @@
+<!DOCTYPE html><html><head><title>Untitled</title></head><body><pre>
+.noeqin
+.include	GEOSequates
+.glbl
+.eqin
+
+
+.psect
+
+ScreenBack:	ldb	flgDoBg,#0
+	ldw	R0,#SCREEN_BASE+(16*40)
+	ldw	R1,#BACK_SCR_BASE+(16*40)
+	ldw	R2,#$1f3f-(16*40)
+	jmp	MoveData
+
+ScreenSafe:	lda	flgDoBg
+	beq	10$
+	jmp	ScreenBack
+10$:	rts
+
+SavColorScn:	ldw	R0,#COLOR_MATRIX+(40*2)	; scrn color
+	ldw	R1,#ColorBBuf
+	ldw	R2,#$03e8-(40*2)
+	jsr	MoveData
+	ldw	R1,COLOR_MATRIX+(40*2)	; scrn color
+	ldw	R0,#$3e8-(40*2)
+	mvb	origColor,R2L
+	jsr	FillRam	; color the term screen
+	rts
+
+ResColorScn:	ldw	R1,#COLOR_MATRIX+(40*2)	; scrn color
+	ldw	R0,#ColorBBuf
+	ldw	R2,#$03e8-(40*2)
+	jsr	MoveData
+	rts
+
+DrawMenu:	lda	#[(Menu00)	; point to first menu
+	sta	$02
+	lda	#](Menu00)
+	sta	$03
+	lda	#$00
+	jmp	DoMenu	; DoMenu
+MenuAct:	jmp	GotoFirstMenu	; GotoFirstMenu
+
+
+
+Menu00:	.byte	$00,$0e	; menu top, bottom
+	.word $0000,$00d3	; menu left, right
+	.byte	$00|$07	; VERTICAL menu | # items
+	.word MnuTxt00	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn01	; sub menu pointer
+	.word MnuTxt01	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn02	; sub menu pointer
+	.word MnuTxt02	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn03	; sub menu pointer
+	.word MnuTxt03	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn04	; sub menu pointer
+	.word MnuTxt04	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn05	; sub menu pointer
+	.word MnuTxt05	; menu text pointer
+	.byte	$40	; DYN_MENU
+	.word MnuDyn06	; sub menu pointer
+MnuTxt00:	.byte	27,"geos",0
+MnuTxt01:	.byte	27,"telnet",0
+MnuTxt02:	.byte	27,"baud rate",0
+MnuTxt03:	.byte	27,"term",0
+MnuTxt04:	.byte	27,"x-modem",0
+MnuTxt05:	.byte 27,"exit",0
+
+MnuDyn01:	jsr	ScreenSafe
+	ldw	R0,#DAABMenu
+	rts
+MnuDyn02:	jsr	ScreenSafe
+	jsr	IsConnected
+	bne	10$
+	ldw	R0,#Menu02
+	rts
+10$:	ldw	R0,#Menu02a
+	rts
+MnuDyn03:	jsr	ScreenSafe
+	jsr	IsConnected
+	beq	10$
+	ldw	R0,#Menu03a
+	rts
+10$:	ldw	R0,#Menu03
+	rts
+MnuDyn04:	jsr	ScreenSafe
+	ldw	R0,#Menu04
+	rts
+MnuDyn05:	jsr	ScreenSafe
+	jsr	IsConnected
+	beq	10$
+	ldw	R0,#Menu05a
+	rts
+10$:	ldw	R0,#Menu05
+	rts
+MnuDyn06:	jsr	ScreenSafe
+	ldw	R0,#Menu06
+	rts
+
+Menu02:	.byte	$0f,$2b	; menu top, bottom
+	.word $001c,$0071	; menu left, right
+	.byte	$80|$02	; HORIZONTAL menu | # items
+	.word MnuTxt06	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word QConnect	; **** action routine here!
+	.word MnuTxt07	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word QConnPhb	; **** action routine here!
+MnuTxt06:	.byte	27,"connect",0
+MnuTxt07:	.byte	27,"phonebook",0
+
+Menu02a:	.byte	$0f,$1d	; menu top, bottom
+	.word $001c,$0071	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+	.word MnuTxa06	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doDisconnect	; **** action routine here!
+MnuTxa06:	.byte	27,"disconnect",0
+
+
+Menu03:	.byte	$0f,$55	; menu top, bottom
+	.word $003b,$0063	; menu left, right
+	.byte	$80|$05	; HORIZONTAL menu | # items
+	.word MnuTxt08	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud300	; **** action routine here!
+	.word MnuTxt09	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud1200	; **** action routine here!
+	.word MnuTxt0a	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud2400	; **** action routine here!
+	.word MnuTxt0b	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud4800	; **** action routine here!
+	.word MnuTxt0c	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud7200	; **** action routine here!
+	.word MnuTxt0d	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doBaud9600	; **** action routine here!
+MnuTxt08:	.byte	27,"300",27,0
+MnuTxt09:	.byte	27,"1200",27,0
+MnuTxt0a:	.byte	27,"2400",27,0
+MnuTxt0b:	.byte	27,"4800",27,0
+MnuTxt0c:	.byte	27,"7200",27,0
+MnuTxt0d:	.byte	27,"9600",27,0
+MnuBauds:	.word MnuTxt08, MnuTxt09, MnuTxt0a, MnuTxt0b
+	.word MnuTxt0c, MnuTxt0d, $0000
+
+Menu03a:	.byte	$0f,$1d	; menu top, bottom
+	.word $003b,$0063	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+Menu03b:	.word MnuTxt08	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word MenuAct	; **** action routine here!
+
+
+Menu04:	.byte	$0f,$2b	; menu top, bottom
+	.word $006c,$00b0	; menu left, right
+	.byte	$80|$02	; HORIZONTAL menu | # items
+	.word MnuTxt0e	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doEchoOn	; **** action routine here!
+	.word MnuTxt0f	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doEchoOff	; **** action routine here!
+MnuTxt0e:	.byte	27,"echo on",27,0
+MnuTxt0f:	.byte	27,"echo off",27,0
+
+
+
+Menu05:	.byte	$0f,$2b	; menu top, bottom
+	.word $0087,$00c0	; menu left, right
+	.byte	$80|$02	; HORIZONTAL menu | # items
+	.word MnuTxt10	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word MenuAct	; **** action routine here!
+	.word MnuTxt11	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word MenuAct	; **** action routine here!
+MnuTxt10:	.byte	27,"upload",0
+MnuTxt11:	.byte	27,"download",0
+
+Menu05a:	.byte	$0f,$1d	; menu top, bottom
+	.word $0087,$00d8	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+	.word MnuTxa10	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word MenuAct	; **** action routine here!
+MnuTxa10:	.byte	27,"not connected",27,0
+
+Menu06:	.byte	$0f,$1d	; menu top, bottom
+	.word $00ba,$00f7	; menu left, right
+	.byte	$80|$01	; HORIZONTAL menu | # items
+	.word MnuTxt12	; menu text pointer
+	.byte	$00	; MENU_ACTION
+	.word doExit	; **** action routine here!
+MnuTxt12:	.byte	27,"to deskTop",0
+
+
+doEchoOn:	lda	#$01
+	sta	flgEcho
+	jsr	FixEcho
+	jmp	GotoFirstMenu
+
+doEchoOff:	lda	#$00
+	sta	flgEcho
+	jsr	FixEcho
+	jmp	GotoFirstMenu
+
+FixEcho:	lda	#27
+	sta	MnuTxt0e
+	sta	MnuTxt0f
+	lda	flgEcho
+	beq	10$
+	lda	#26
+	sta	MnuTxt0e
+	rts
+10$:	lda	#26
+	sta	MnuTxt0f
+	rts
+
+IsConnected:	lda	#0	; *** DELME!!!!!
+	rts		; *** DELME!!!!!
+	lda	$01
+	pha
+	lda	#$35
+	sta	$01
+	lda	$dd01
+	and	#$10
+	sta	flgConn+1
+	pla
+	sta	$01
+flgConn:	lda	#$00
+	rts
+
+
+
+doBaud300:	lda	#0
+	jmp	doBaud
+doBaud1200:	lda	#1
+	jmp	doBaud
+doBaud2400:	lda	#2
+	jmp	doBaud
+doBaud4800:	lda	#3
+	jmp	doBaud
+doBaud7200:	lda	#4
+	jmp	doBaud
+doBaud9600:	lda	#5
+	jmp	doBaud
+doBaud:	cmp	CLL2Baud
+	bne	10$
+	jmp	GotoFirstMenu
+10$:	sta	A2L
+	jsr	GetBaudPtr
+	inw	A0
+	ldy	#0
+20$:	lda	(A0),y
+	beq	30$
+	cmp	#27
+	beq	30$
+	sta	BaudCmd+4,y
+	iny
+	bne	20$
+30$:	lda	#13
+	sta	BaudCmd+4,y
+	jsr	keyRestore
+	mvb	CLL2BfRdx,CLL2BfWdx
+	ldw	R0,#BaudCmd
+	jsr	ComPutS
+	ldw	R0,#BaudCmd
+	jsr	PutChars
+	jsr	BaudSet
+	jsr	FixBaud
+	mvb	CLL2BfRdx,CLL2BfWdx
+	jsr	keySetup
+	jmp	GotoFirstMenu	
+
+GetBaudPtr:	asl	a
+	tax
+	lda	MnuBauds,x
+	sta	A0L
+	inx
+	lda	MnuBauds,x
+	sta	A0H
+	rts
+
+
+
+DAinit:	jsr	ScreenSafe
+	jsr	SavColorScn
+	jsr	ComDisable
+	rts
+
+DAdone:	jsr	ResColorScn
+	jsr	ComEnable
+	rts
+
+;* Baud Cds:	0=300, 1=1200, 2=2400,3=4800
+;*	4=7200,5=9600,6=144, 7=192
+FixBaud:	ldx	#0
+	ldy	#0
+10$:	lda	MnuBauds,x
+	sta	A0L
+	inx
+	lda	MnuBauds,x
+	beq	20$
+	sta	A0H
+	inx
+	lda	#27
+	sta	(A0),y
+	bra	10$
+20$:	lda	CLL2Baud
+	add	#1
+	asl	a
+	sta	rrate
+	lda	CLL2Baud
+	jsr	GetBaudPtr
+	mvw	A0,Menu03b
+	lda	#26
+	ldy	#0
+	sta	(A0),y	
+	rts
+
+
+BaudCmd:	.byte	13,"atb2400",13,13,0
+
+
+doExit:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	jsr	IsConnected
+	bne	50$
+	ldw	A2,#ExitString
+	jsr	YNBox
+	lda	sysDBData
+	cmp	#$04
+	bne	70$
+10$:	jsr	keySetup
+	jmp	ResColorScn
+50$:	ldw	A2,#DiscString
+	jsr	YNBox
+	lda	sysDBData
+	cmp	#$04
+	beq	10$
+	jsr	modal1On
+	lda	#14
+	jsr	Disconn2
+	jsr	modal1Off
+70$:	ldw	R0,#atbCmd
+	jsr	ComPutS
+	jmp	CleanExit
+
+atbCmd:	.byte	13,"atb1200",13,13,13,13,13,13,0
+ExitString:	.byte	24,"Exit to deskTop?",27,0
+DiscString:	.byte	24,"Disconnect and Exit?",27,0
+
+doDisconnect:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	; * prompt, maybe?
+	jsr	modal1On
+	lda	#14
+	jsr	Disconn2
+	jsr	modal1Off
+	jsr	keySetup
+	jmp	ResColorScn
+
+
+
+Disconn2:	sta	A4H
+	jsr	IsConnected
+	bne	10$
+	rts
+10$:	lda	A4H
+	jsr	Pause
+	ldw	R0,#PlusPlusPlus
+	jsr	ComPutS
+	lda	A4H
+	jsr	Pause
+	ldw	R0,#athCmd
+	jsr	ComPutS
+	rts
+
+PlusPlusPlus:	.byte	"+++",0
+athCmd:	.byte	"ath0",13,0
+
+Pause:	sta	A5L
+	lda	$01
+	pha
+	lda	#$35
+	sta	$01
+10$:	mvb	$dc08,A5H
+20$:	cpb	A5H,$dc08
+	beq	20$
+	dec	A5L
+	bne	10$
+	pla
+	sta	$01
+	rts
+
+modal1On:	ldb	dispBufferOn,#ST_WR_FORE
+	jsr	UseSystemFont
+	jsr	i_GraphicsString
+	.byte	$01,$5f,$00,$4f	; MOVEPENTO Xl,Xh,Y
+	.byte	$07,$eb,$00,$6e	; FRAME_RECTO  Xl,Xh,Y
+	.byte	$01,$60,$00,$50	; MOVEPENTO Xl,Xh,Y
+	.byte	$05,$00	; NEWPATTERN
+	.byte	$03,$ea,$00,$6d	; RETANGLETO  Xl,Xh,Y
+	.byte	$06,$7c,$00,$61,24,"Disconnecting...",27,0
+	rts		; exit from screen routine
+
+modal1Off:	jsr	FixFont80
+	jsr	i_RecoverRectangle
+	.byte	$4f,$6e
+	.word $005f,$00eb
+	rts
+
+
+
+</pre></body></html>
