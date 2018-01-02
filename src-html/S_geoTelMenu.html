@@ -240,7 +240,7 @@ MnuSt06:	.word MnuTxt12	; menu text pointer
 	.word doBufogle	; **** action routine here!
 	.word MnuTxt14	; menu text pointer
 	.byte	$00	; MENU_ACTION
-	.word doExit	; **** action routine here!
+	.word doBufLod	; **** action routine here!
 	.word MnuTxt15	; menu text pointer
 	.byte	$00	; MENU_ACTION
 	.word doBufSav	; **** action routine here!
@@ -249,7 +249,7 @@ MnuSt06:	.word MnuTxt12	; menu text pointer
 	.word doBufView	; **** action routine here!
 	.word MnuTxt17	; menu text pointer
 	.byte	$00	; MENU_ACTION
-	.word doExit	; **** action routine here!
+	.word doBufDump	; **** action routine here!
 MnuTxt12:	.byte	27,"start",0
 MnuTxt14:	.byte	27,"load",0
 MnuTxt15:	.byte	27,"save",0
@@ -283,7 +283,34 @@ doBufogle:	jsr	GotoFirstMenu
 10$:	ldb	BufferFlg,#0
 	rts
 
-
+PoorPETSCII:	ldx	XDnFType
+	cpx	#$02
+	bne	10$
+	rts
+10$:	cmp	#$08
+	bne	12$
+	lda	#$14	; 8->20
+11$:	rts
+12$:	cmp	#$0d
+	beq	11$
+	cmp	#$20
+	bcs	14$
+13$:	lda	#0
+	rts
+14$:	cmp	#$41
+	bcc	11$	; 32-40 is good
+	cmp	#$5b
+	bcs	20$
+	add	#$80
+	rts
+20$:	cmp	#$61
+	bcc	11$
+	cmp	#$7b
+	bcs	13$
+	sec
+	sbc	#$20
+	rts
+	
 
 doBufSav:	jsr	GotoFirstMenu
 	jsr	SavColorScn
@@ -305,19 +332,59 @@ doBufSav:	jsr	GotoFirstMenu
 	jsr	CreatSF
 	cpx	#0
 	beq	30$
-	ldw	A2,#XDnFlTxt
+	ldw	A2,#BNoCrTxt
 	jsr	OKBox
 	jmp	XferCncl	; we're done.
 30$:	jsr	GetRByte
 	cpx	#0
 	bne	90$
+	jsr	PoorPETSCII
+	cmp	#0
+	beq	30$
 	jsr	PutSByte
 	bra	30$
 90$:	lda	#$81
 	sta	A2L
 	jsr	ClosSF
+	ldw	A2,#BDnCrTxt
+	jsr	OKBox
+	jsr	XComReset
 	jmp	XferCncl	; we're done.
 BufSavNo:	.byte	27,"Buffer Empty?!",0
+BNoCrTxt:	.byte	27,"File Create Failure.",0
+BDnCrTxt:	.byte	27,"Save Complete.",0
+
+doBufLod:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	jsr	DoXUBox
+	beq	20$
+	rts		; cancel already done
+20$:	ldw	A2,#XFilename
+	ldb	A3L,#$00
+	jsr	OpenSF
+	cpx	#0
+	beq	30$
+	ldw	A2,#BNoOpTxt
+	jsr	OKBox
+	jsr	XComReset
+	jmp	XferCncl	; we're done.
+30$:	jsr	CreatRW
+35$:	jsr	GetSByte
+	cpx	#0
+	bne	90$
+	jsr	PutRByte
+	bra	35$
+90$:	lda	#$81
+	sta	A2L
+	jsr	ClosSF
+	ldw	A2,#BDnLdTxt
+	jsr	OKBox
+	jsr	XComReset
+	jmp	XferCncl	; we're done.
+BNoOpTxt:	.byte	27,"File Open Failure.",0
+BDnLdTxt:	.byte	27,"Load Complete.",0
 
 doBufView:	jsr	GotoFirstMenu
 	jsr	SavColorScn
@@ -342,8 +409,38 @@ doBufView:	jsr	GotoFirstMenu
 	jsr	DrwCRLF
 	mvb	R1H,txtXY+2
 	mvw	R11,txtXY
-	; **TODO: move textXY to R1.11 or vis-a-versa
-	jmp	keySetup	
+	jmp	keySetup
+
+doBufDump:	jsr	GotoFirstMenu
+	jsr	SavColorScn
+	jsr	ScreenSafe
+	jsr	keyRestore
+	jsr	OpenRR
+	beq	10$
+	ldw	A2,#BufSavNo
+	jsr	CNCLBox
+	jmp	XferCncl	; we're done.
+10$:	jsr	ResColorScn	; <-- only if xfer not done
+	jsr	CrsrTL	; Screen clear and top-left
+	lda	txtTop
+	jsr	ClrTrmScn	; lda from prev MATTERS
+	lda	BufferFlg
+	pha
+	ldb	BufferFlg,#0
+20$:	jsr	GetRByte
+	cpx	#0
+	bne	90$
+	sta	keyData
+	jsr	KeyPRtn
+	bra	20$
+90$:	pla
+	sta	BufferFlg
+	mvb	txtXY+2,R1H
+	mvw	txtXY,R11
+	jsr	DrwCRLF
+	mvb	R1H,txtXY+2
+	mvw	R11,txtXY
+	jmp	keySetup
 
 doEchoOn:	lda	#$01
 	sta	flgEcho

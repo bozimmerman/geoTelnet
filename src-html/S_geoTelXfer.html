@@ -22,6 +22,15 @@ DoXUpload:	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
+	jsr	DoXUBox
+	beq	10$
+	rts
+10$:	lda	txtTop	; first row to clear
+	jsr	ClrTrmScn	; clears the screen
+	ldb	flgDoBg,#0
+	jmp	XUpload
+
+DoXUBox:
 05$:	ldb	FBOXnod1,#0
 	ldb	FBOXnoo2,#$06	; reset disk icon
 	cpb	curDrive,VPRGdriv
@@ -37,7 +46,9 @@ DoXUpload:	jsr	GotoFirstMenu
 	beq	11$
 	cmp	#$02	; cancelled?
 	bne	20$
-15$:	jmp	XferCncl
+15$:	jsr	XferCncl
+	ldx	#$ff
+	rts
 20$:	cmp	#$06	; change disks?
 	bne	23$
 	ldw	$885b,#$ff00	; re-clear selection
@@ -50,10 +61,8 @@ DoXUpload:	jsr	GotoFirstMenu
 	jsr	FBOXopen	; moves filename into XFilename
 	lda	XFilename
 	beq	15$
-	lda	txtTop	; first row to clear
-	jsr	ClrTrmScn	; clears the screen
-	ldb	flgDoBg,#0
-	jmp	XUpload
+	ldx	#0
+	rts
 
 XferCncl:	jsr	XFixDrive
 	jsr	keySetup
@@ -626,7 +635,7 @@ XSEQgfx:	.byte	1,115,0,88	; movepento
 	.byte	7,123,0,96	; seq recto
 FBOXgfnx:	.byte	0
 FBOXttt:	.byte	"PRG",0,"SEQ",0
-FBOXtt2:	.byte	"ascii",0,"petscii",0
+FBOXtt2:	.byte	"ansi",0,"petscii",0
 
 FBOXclk:	lda	mouseData
 	beq	10$
