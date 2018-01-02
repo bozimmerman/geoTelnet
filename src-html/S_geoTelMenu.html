@@ -21,7 +21,7 @@ ScreenBack:	ldb	flgDoBg,#0
 	ldw	R0,#SCREEN_BASE+(16*40)
 	ldw	R1,#BACK_SCR_BASE+(16*40)
 	ldw	R2,#$1f3f-(16*40)
-	jmp	MoveData
+	jmp	MyMoveData
 
 ScreenSafe:	lda	flgDoBg
 	beq	10$
@@ -31,7 +31,7 @@ ScreenSafe:	lda	flgDoBg
 SavColorScn:	ldw	R0,#COLOR_MATRIX+(40*2)	; scrn color
 	ldw	R1,#ColorBBuf
 	ldw	R2,#$03e8-(40*2)
-	jsr	MoveData
+	jsr	MyMoveData
 	ldw	R1,COLOR_MATRIX+(40*2)	; scrn color
 	ldw	R0,#$3e8-(40*2)
 	mvb	origColor,R2L
@@ -41,7 +41,19 @@ SavColorScn:	ldw	R0,#COLOR_MATRIX+(40*2)	; scrn color
 ResColorScn:	ldw	R1,#COLOR_MATRIX+(40*2)	; scrn color
 	ldw	R0,#ColorBBuf
 	ldw	R2,#$03e8-(40*2)
-	jsr	MoveData
+	jsr	MyMoveData
+	rts
+
+ChkOnLn1:	lda	FlgNoDCD
+	bne	10$
+	jmp	ComOnline
+10$:	lda	#1
+	rts
+
+ChkOnLn2:	lda	FlgNoDCD
+	bne	10$
+	jmp	ComOnline
+10$:	lda	#0
 	rts
 
 DrawMenu:	lda	BuffEnable
@@ -107,14 +119,14 @@ MnuDyn01:	jsr	BackMenu
 	ldw	R0,#DAABMenu
 	rts
 MnuDyn02:	jsr	BackMenu
-	jsr	ComOnline
+	jsr	ChkOnLn2
 	bne	10$
 	ldw	R0,#Menu02
 	rts
 10$:	ldw	R0,#Menu02a
 	rts
 MnuDyn03:	jsr	BackMenu
-	jsr	ComOnline
+	jsr	ChkOnLn2
 	beq	10$
 	ldw	R0,#Menu03a
 	rts
@@ -124,7 +136,7 @@ MnuDyn04:	jsr	BackMenu
 	ldw	R0,#Menu04
 	rts
 MnuDyn05:	jsr	BackMenu
-	jsr	ComOnline
+	jsr	ChkOnLn1
 	beq	10$
 	ldw	R0,#Menu05
 	rts
@@ -599,7 +611,7 @@ doExit:	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
 	jsr	keyRestore
-	jsr	ComOnline
+	jsr	ChkOnLn1
 	bne	50$
 	ldw	A2,#ExitString
 	jsr	YNBox
@@ -640,7 +652,7 @@ doDisconnect:	jsr	GotoFirstMenu
 
 
 Disconn2:	sta	A4H
-	jsr	ComOnline
+	jsr	ChkOnLn1
 	bne	10$
 	rts
 10$:	lda	A4H

@@ -415,13 +415,13 @@ AnsiL2:	ldx	txtXY+2
 	mvw	R5,R1
 	mvw	A2,R2
 	sbw	R1,R2
-	jsr	MoveData	; move hires scrn
+	jsr	MyMoveData	; move hires scrn
 	mvw	colorLPtr,R0
 	mvw	colorLPtr,R1
 	avw	#40,R1
 	ldw	R2,COLOR_MATRIX+1000
 	sbw	R1,R2
-	jsr	MoveData	; move color scrn
+	jsr	MyMoveData	; move color scrn
 	jsr	AnsiDFL
 	dec	ansiNBuf+1
 	beq	30$
@@ -461,13 +461,13 @@ AnsiM2:	ldx	txtXY+2
 	mvw	R5,R0
 	mvw	A2,R2
 	sbw	R0,R2
-	jsr	MoveData	; move hires scrn
+	jsr	MyMoveData	; move hires scrn
 	mvw	colorLPtr,R1
 	mvw	colorLPtr,R0
 	avw	#40,R0
 	ldw	R2,COLOR_MATRIX+1000
 	sbw	R0,R2
-	jsr	MoveData	; move color scrn
+	jsr	MyMoveData	; move color scrn
 	jsr	AnsiDLL
 	dec	ansiNBuf+1
 	beq	30$

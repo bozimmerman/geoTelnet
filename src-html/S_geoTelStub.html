@@ -20,25 +20,52 @@
 Main:	jsr	i_InitVPrg
 	.word PermName
 	cpx	#0
-	beq	10$
-	jmp	EnterDeskTop
-10$:	jsr	Check128
 	beq	20$
+10$:	jmp	EnterDeskTop
+20$:	ldw	R9,#$8400
+	jsr	GetFHdrInfo
+	cpx	#0
+	bne	10$
+	jsr	ReadArgs
+	jsr	Check128
+	beq	50$
 	jsr	i_LdMod
 	.byte	1
 	jmp	VPRGbase
-20$:	jsr	i_LdMod
+50$:	jsr	i_LdMod
 	.byte	2
 	jmp	VPRGbase
 
-Check128:	lda #$12
-	cmp $c00f
-	bpl 10$
-	lda $c013
-10$:	cmp #$80
+Check128:	lda	#$12
+	cmp	$c00f
+	bpl	10$
+	lda	$c013
+10$:	cmp	#$80
 	rts
+
 PermName:	.byte "geoTelnet   1.0 ",0
 
+;** Read in any arguments
+ReadArgs:	ldw	A0,#$8100+160
+	ldy	#0
+10$:	lda	(A0),y
+	beq	99$
+	cmp	#'-'
+	bne	99$
+	iny
+	lda	(A0),y
+	cmp	#'d'
+	bne	20$
+	inc	FlgNoDCD
+20$:	cmp	#'D'
+	bne	21$
+	inc	FlgNoDCD
+21$:	nop
+90$:	iny
+	bne	10$
+99$:	rts
+
+FlgNoDCD:	.byte	0
 
 
 </pre></body></html>

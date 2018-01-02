@@ -109,8 +109,7 @@ REUxVal:	ldx	#0
 05$:	ldb	REUxVal+1,#$ff
 	ldb	REUxVal+2,#$60
 	jmp	REUxVal
-10$:	sta	REUxBnk
-	dec	REUxBnk
+10$:	ldb	REUxBnk,#1
 	ldy	#$03
 20$:	lda	$88c7,y
 	bne	30$
@@ -126,7 +125,10 @@ REUxVal:	ldx	#0
 	lda	$88c7,y
 	clc
 	adc	REUxBctC,x
-	cmp	REUxBnk
+	sta	REUxBnk
+	clc
+	adc	#1
+	cmp	ramExpSize
 	bcc	$50
 45$:	ldb	REUxVal+1,#$ff
 50$:	lda	#0

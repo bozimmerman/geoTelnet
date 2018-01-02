@@ -36,7 +36,6 @@ curWidth = $8807
 
 
 StartTelnet:	jsr	CreatRW
-	stx	BuffEnable
 	jsr	scnSetup
 	ldb	flgEcho,#1
 	jsr	FixEcho
@@ -302,11 +301,11 @@ DrawLF:	cpb	R1H,txtBEnd
 10$:	ldw	R0,#SCREEN_BASE+(24*40)
 	ldw	R1,#SCREEN_BASE+(16*40)
 	ldw	R2,#$1f3f-(24*40)
-	jsr	MoveData
+	jsr	MyMoveData
 	ldw	R0,#COLOR_MATRIX+(3*40)
 	ldw	R1,#COLOR_MATRIX+(2*40)
 	ldw	R2,#$03e8-(3*40)
-	jsr	MoveData
+	jsr	MyMoveData
 	ldw	R1,#SCREEN_BASE+$1f3f-(8*40)
 	ldw	R0,#8*40
 	ldb	R2L,#0
@@ -335,6 +334,28 @@ ClrColLn:	tya
 20$:	pla
 	tay
 	rts
+
+
+
+MyMoveData:			; *** DELME
+	ldy	#0
+	lda	R2H
+	beq	20$
+10$:	lda	(R0),y
+	sta	(R1),y
+	iny
+	bne	10$
+	inc	R0H
+	inc	R1H
+	dec	R2H
+	bne	10$
+20$:	cpy	R2L
+	beq	30$
+	lda	(R0),y
+	sta	(R1),y
+	iny
+	bra	20$
+30$:	rts
 
 PutDel:	cwi	R11,#3	; todo: txtLeft
 	bcs	15$
