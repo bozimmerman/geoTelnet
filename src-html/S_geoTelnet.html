@@ -250,19 +250,18 @@ colorPtr:	.word COLOR_MATRIX
 
 
 DrawCR:	mvw	txtLeft,R11
+	mvw	colorLPtr,colorPtr
 	rts
 
-DrawLF:	adb	curHeight,R1H
-	cpb	R1H,txtBot
+DrawLF:	cpb	R1H,txtBEnd
 	bcs	10$
+	adb	curHeight,R1H
 	cwi	colorLPtr,#$8fc0
 	bcs	05$
 	avw	#40,colorLPtr
-05$:	mvw	colorLPtr,colorPtr
-	rts
-10$:	sbb	curHeight,R1H
-	mvw	colorLPtr,colorPtr
-	ldw	R0,#SCREEN_BASE+(24*40)
+	avw	#40,colorPtr
+05$:	rts
+10$:	ldw	R0,#SCREEN_BASE+(24*40)
 	ldw	R1,#SCREEN_BASE+(16*40)
 	ldw	R2,#$1f3f-(24*40)
 	jsr	MoveData
@@ -279,6 +278,7 @@ DrawLF:	adb	curHeight,R1H
 	ldb	R2L,#0
 	jsr	FillRam
 	ldb	flgDoBg,#1
+	ldw	colorLPtr,#$8fc0
 	mvb	txtBot,R1H
 	sbb	curHeight,R1H
 	inc	R1H
@@ -331,10 +331,12 @@ CrsrUp:	cpb	txtTop,txtXY+2	; Cursor Up
 
 CrsrDn:	cpb	txtXY+2,txtBEnd	; Cursor Down
 	bcc	10$
-	rts
-10$:	avw	#40,colorLPtr
+09$:	rts
+10$:	adb	curHeight,txtXY+2
+	cwi	colorLPtr,#$8fc0
+	bcs	09$
+	avw	#40,colorLPtr
 	avw	#40,colorPtr
-	adb	curHeight,txtXY+2
 	rts
 
 CrsrRt:	cpw	txtXY,txtREnd	; Cursor Forward
