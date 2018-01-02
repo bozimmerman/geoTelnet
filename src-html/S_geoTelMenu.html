@@ -323,7 +323,7 @@ doBufSav:	jsr	GotoFirstMenu
 	jmp	XferCncl	; we're done.
 10$:	ldb	XDnFType,#$02	; first option==ascii
 	ldw	FBOXtt0,#FBOXtt2
-	ldw	FBOXtt1,#FBOXtt2+6
+	ldw	FBOXtt1,#FBOXtt2+5
 	jsr	DoXDBox
 	beq	20$
 	rts		; cancel already done

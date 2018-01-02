@@ -69,6 +69,8 @@ SeekRR:	lda	A2H
 	mvb	A2L,REUxRDx
 	jmp	REUxRChk
 
+
+
 ;*	SeekRW( ) .x error
 SeekRW:	mvb	REUxWPg,REUxRPg
 	mvb	REUxWDx,REUxRDx
@@ -88,16 +90,36 @@ SeekRW:	mvb	REUxWPg,REUxRPg
 REUxVal:	ldx	#0
 	nop
 	lda	ramExpSize
-	bne	10$
-	ldb	REUxVal+1,#$ff
-	bne	20$
-10$:	lda	#0	; **REALLY?! BZ:DELME???
-	sta	REUxBnk
-	lda	#0
-	jsr	REUxFtch
-20$:	ldb	REUxVal+2,#$60
+	cmp	#$02
+	bcs	10$
+05$:	ldb	REUxVal+1,#$ff
+	ldb	REUxVal+2,#$60
 	jmp	REUxVal
-
+10$:	sta	REUxBnk
+	dec	REUxBnk
+	ldy	#$03
+20$:	lda	$88c7,y
+	bne	30$
+	dey
+	cpy	#$ff
+	bne	20$
+	beq	50$
+30$:	lda	$848e,y
+	and	#$0f
+	cmp	#$04
+	bcs	45$
+	tax
+	lda	$88c7,y
+	clc
+	adc	REUxBctC,x
+	cmp	REUxBnk
+	bcc	$50
+45$:	ldb	REUxVal+1,#$ff
+50$:	lda	#0
+	jsr	REUxFtch
+90$:	ldb	REUxVal+2,#$60
+	jmp	REUxVal
+REUxBctC:	.byte	0,3,6,13
 
 
 REUxFtch:	pha
