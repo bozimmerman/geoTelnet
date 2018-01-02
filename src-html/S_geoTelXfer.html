@@ -7,6 +7,8 @@
 
 .psect
 
+XComReset:	jsr	XMOPause
+	jmp	ComReInit
 
 
 DoXUpload:	jsr	GotoFirstMenu
@@ -157,10 +159,12 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	jsr	OpenSF
 	cpx	#0
 	beq	10$
+	jsr	XComReset
 	ldw	A2,#XUpFlTxt
 	jsr	OKBox
 	jmp	keySetup
-10$:	jsr	UseSystemFont
+10$:	jsr	XComReset
+	jsr	UseSystemFont
 	jsr	XUpBox
 	ldw	A2,#XUpFillBuf
 	ldw	A3,#XUpRead
@@ -168,13 +172,15 @@ XUpload:	ldb	XMoreFlg,#$ff	; there is definitely more to get
 	jsr	XMOsend
 	cpx	#0
 	bne	15$
+	jsr	XComReset
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
 	ldw	A2,#XUpDnTxt
 	jsr	OKBox
 	bra	20$
-15$:	lda	#$10	; first row to clear
+15$:	jsr	XComReset
+	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
 	ldw	A2,#XUpErTxt
@@ -217,7 +223,8 @@ XUpFillBuf:	jsr	XUpdBox
 	cpx	#0
 	bne	60$
 	inc	XMoreFlg
-60$:	ldx	#0
+60$:	jsr	XComReset
+	ldx	#0
 	rts
 
 
@@ -341,8 +348,10 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	beq	10$
 	ldw	A2,#XDnFlTxt
 	jsr	OKBox
+	jsr	XComReset
 	jmp	keySetup
-10$:	jsr	UseSystemFont
+10$:	jsr	XComReset
+	jsr	UseSystemFont
 	jsr	XDnBox
 	ldw	A2,#XDnRcvByte
 	ldw	A3,#XDnGooBlk
@@ -352,6 +361,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 	bne	15$
 	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
+	jsr	XComReset
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset
@@ -361,6 +371,7 @@ XDownload:	ldw	XBufWrPtr,#BACK_SCR_BASE
 15$:	jsr	XDnFlush
 	ldb	A2L,#$82	; ***TODO
 	jsr	ClosSF
+	jsr	XComReset
 	lda	#$10	; first row to clear
 	jsr	ClrTrmScn	; clears the screen
 	jsr	scnReset	; will restore font
@@ -386,18 +397,20 @@ XDnFlush:	ldw	A2,#BACK_SCR_BASE
 	mvw	XBufWrPtr,A3
 	jsr	PutSMem
 	ldw	XBufWrPtr,#BACK_SCR_BASE
+	jsr	XComReset
 	rts
 
-XDnGooBlk:	avw	#128,XBytesDone
+XDnGooBlk:	mvw	XBufWrPtr,XBufRdPtr
+	avw	#128,XBytesDone
 	jsr	XUpdBox
-	cwi	XBufWrPtr,#BACK_SCR_BASE+$1800
+	cwi	XBufWrPtr,#BACK_SCR_BASE+$1700
 	bcc	10$
 	jsr	XDnFlush
 10$:	rts
 
 
-XDnBadBlk:	svw	#128,XBufWrPtr
-	inc	XErrors
+XDnBadBlk:	inc	XErrors
+	mvw	XBufRdPtr,XBufWrPtr
 	jsr	XUpdBox
 	rts
 
