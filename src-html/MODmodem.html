@@ -60,7 +60,8 @@ ComInit:	jsr CLL2xxRb
 	jsr CLL2BSet
 	mvb A3H,CLL2FloC
  	sei
-	jsr CLL2_0N
+	phb $01
+	ldb $01,#$35
 	lda CLRetNMI+2
 	bne 10$
 	lda $fffa
@@ -95,7 +96,7 @@ ComInit:	jsr CLL2xxRb
 	ora #$02
 	sta $dd03
 	sta $dd01 ; set everything high thats writeable
-	jsr CLL2_0FF
+	plb $01
 	cli 
 	rts 
 
@@ -105,7 +106,8 @@ ComInit:	jsr CLL2xxRb
 ;*
 ;************************
 ComUninst: 	sei 
-	jsr CLL2_0N
+	phb $01
+	ldb $01,#$35
 	lda CLRetNMI+1
 	sta $fffa
 	sta $0318
@@ -117,7 +119,7 @@ ComUninst: 	sei
 	lda $dd00
 	ora #$04
 	sta $dd00
-	jsr CLL2_0FF
+	plb $01
 	cli
 	clc 
 	rts 	
@@ -128,17 +130,7 @@ CLL2xxRb:	lda #0
 	ldb CLL2BfFdx,#$F0
 	rts
 
-CLL2_0FF:	pha
-	lda #$30
-	sta $01
-	pla
-	rts
 
-CLL2_0N:	pha
-	lda #$35
-	sta $01
-	pla
-	rts
 
 ;********************************
 ;* ComReInit	Re-Initialize RS-232 system
@@ -146,14 +138,15 @@ CLL2_0N:	pha
 ;********************************
 
 ComReInit:	sei 
-	jsr CLL2_0N
+	phb $01
+	ldb $01,#$35
 	lda CLRetNMI+1
 	sta $fffa
 	sta $0318
 	lda CLRetNMI+2
 	sta $fffb
 	sta $0319
-	jsr CLL2_0FF
+	plb $01
 	cli
 	mvb	CLL2Baud,A3L
 	mvb	CLL2FloC,A3H
@@ -169,10 +162,11 @@ ComReInit:	sei
 ComDisable:	jsr ComFloff
 20$:	lda CLL2Busy
 	bmi 20$
-30$:	jsr CLL2_0N
+30$:	phb $01
+	ldb $01,#$35
 	lda #$7f
 	sta $dd0d
-	jsr CLL2_0FF
+	plb $01
 	lda #$80
 	sta CLL2Busy
 	clc 
@@ -185,7 +179,8 @@ ComDisable:	jsr ComFloff
 ;* Inputs:
 ;*
 ;**********************************
-ComEnable:	jsr CLL2_0N
+ComEnable:	phb $01
+	ldb $01,#$35
 	lda CLL2WTime+2
 	sta $dd06
 	lda CLL2WTime
@@ -196,7 +191,7 @@ ComEnable:	jsr CLL2_0N
 	sta CLL2Busy
 	lda #$90
 	sta $dd0d
-	jsr CLL2_0FF
+	plb $01
 	jsr ComFlon
 	clc 
 	rts 
@@ -208,15 +203,12 @@ ComEnable:	jsr CLL2_0N
 ;* Outputs:	N = 0, not online
 ;*	N > 0, online
 ;**********************************
-ComOnline:	lda	$01
-	pha
-	lda	#$35
-	sta	$01
+ComOnline:	phb $01
+	ldb $01,#$35
 	lda	$dd01
 	and	#$10
 	sta	ComOFlg+1
-	pla
-	sta	$01
+	plb	$01
 ComOFlg:	lda	#$00
 	rts
 
@@ -231,7 +223,10 @@ ComSend:	php
 CLL2SndL:	lda CLL2Busy
 	bmi CLL2SndL
 	sei 
-	jsr CLL2_0N
+	pla 
+	sta CLL2WTmp
+	phb $01
+	ldb $01,#$35
 	lda #$81
 	sta $dd0d
 	lda #$11
@@ -240,24 +235,20 @@ CLL2SndL:	lda CLL2Busy
 	sta CLL2WBit
 	lda #$80
 	sta CLL2Busy
-	pla 
-	sta CLL2WTmp
 	lda CLL2Mark
 	sta $dd00
 	lsr CLL2WTmp
 	bcc 10$
 	lda CLL2Space
 10$:	sta CLL2NxtO
-	jsr CLL2_0FF
+	plb $01
 	plp 
 	rts 
 
 CLL2NMI1:	sei 
 CLL2NMI2:	pha
-	lda $01
-	pha
-	lda #$35
-	sta $01
+	phb $01
+	ldb $01,#$35
 	lda $dd0d
 	bpl 40$
 	and #$03
@@ -274,14 +265,12 @@ CLL2NMI2:	pha
 	bcs 10$
 	lda CLL2Mark
 10$:	sta CLL2NxtO
-	pla
-	sta $01
+	plb $01
 	pla 
 	rti
 20$:	lda CLL2Space
 	sta $dd00
-	pla
-	sta $01
+	plb $01
 	pla 
 	rti
 30$:	lda #$10
@@ -333,8 +322,7 @@ CLL2NMI_:	lda #$02
 	;jsr ComSend	; obviously a bad idea.
 20$:	lda #$90
 	sta $dd0d
-CLNMIXit:	pla
-	sta $01
+CLNMIXit:	plb $01
 	pla 
 	rti
 CLRetNMI:	jmp $0000	;$fe56
@@ -347,13 +335,14 @@ CLRetNMI:	jmp $0000	;$fe56
 ;******************************
 ComSPut:	php 
 	pha
-	jsr CLL2_0N
+	phb $01
+	ldb $01,#$35
 10$:	lda $d012
 	cmp #$f2
 	bcs 20$
 	cmp #$2c
 	bcs 10$
-20$:	jsr CLL2_0FF
+20$:	plb $01
 	jmp CLL2SndL
 
 
@@ -375,7 +364,8 @@ CLL2BSet:	sta CLL2Baud
 	jsr IsNTSC
 	beq 19$
 	ldw A0,#CLL2PBVals		
-19$:	jsr CLL2_0N
+19$:	phb $01
+	ldb $01,#$35
 	ldx #$00
 20$:	lda (A0),y
 	sta CLL2WTime,x
@@ -384,7 +374,7 @@ CLL2BSet:	sta CLL2Baud
 	inx 
 	cpx #$04
 	bne 20$
-	jsr CLL2_0FF
+	plb $01
 	rts 
 
 ;*****************************
@@ -396,11 +386,9 @@ IsNTSC:	lda #$00
 	beq 10$
 	cmp #$01
 	rts
-10$:	lda $01
-	pha
-	sei
-	lda #$35
-	sta $01
+10$:	sei
+	phb $01
+	ldb $01,#$35
 	lda $d011
 	pha
 	mvw $fffa,CLL2nmsv
@@ -424,8 +412,7 @@ IsNTSC:	lda #$00
 50$:	pla
 	sta $d011
 	mvw CLL2nmsv,$fffa
-	pla
-	sta $01
+	plb $01
 	cli
 	jmp IsNTSC
 CLL2rti:	rti
@@ -467,15 +454,12 @@ ComGet:	lda CLL2BfRdx
 ComFlon:	pha
 	bit CLL2FloC
 	bpl 10$
-	lda $01
-	pha
-	lda #$35
-	sta $01
+	phb $01
+	ldb $01,#$35
 	lda $dd01
 	ora #$02
 	sta $dd01
-	pla
-	sta $01
+	plb $01
 	bit CLL2FloC
 10$:	bvc 20$
 	lda #$11
@@ -492,15 +476,12 @@ ComFlon:	pha
 ComFloff:	pha
 	bit CLL2FloC
 	bpl 10$
-	lda $01
-	pha
-	lda #$35
-	sta $01
+	phb $01
+	ldb $01,#$35
 	lda $dd01
 	and #$fd
 	sta $dd01
-	pla
-	sta $01
+	plb $01
 	bit CLL2FloC
 10$:	bvc 30$
 	lda #$13
