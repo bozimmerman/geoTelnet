@@ -19,10 +19,10 @@
 	.word	0	;first two bytes = 0
 	.byte	3		;width in bytes
 	.byte	21	;and height in scanlines of:
-<img src="00064.png" />	.byte	$80 | 3	;Commodore type, bit 7 S
+<img src="00063.png" />	.byte	$80 | 3	;Commodore type, bit 7 S
 	.byte	APPLICATION	;Geos file type
 	.byte	VLIR	;Geos file structure type
-	.word	Main	;load address of program 
+	.word	Main	;load address of program
 	.word	$3ff	;end address, needed for
 				;desk accessories.
 	.word	Main	;init address of program
@@ -31,5 +31,5 @@
 			;4 char version number,
 			;3 zeroes,
 			;40/80 column flag.
-	.byte	"Bo Zimmerman   
+	.byte	"Bo Zimmerman
 </pre></body></html>

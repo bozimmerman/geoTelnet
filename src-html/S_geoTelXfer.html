@@ -5,7 +5,7 @@
 ;*
 ;* XModem transfer gui and file mgmt.
 ;* File handlers shared with Buffer options
-;* 
+;*
 ;*****************************
 .noeqin
 .include	GEOSequates
@@ -105,7 +105,7 @@ FBOXdcon:	.word FBOXdmag
 	.byte	$06, $10
 	.word FBOXswdv
 FBOXdmag:
-<img src="00064.png" />
+<img src="00069.png" />
 UpBxGfx:	jsr	ReDoMenu
 	mvw	leftMargin,R3
 	mvw	rightMargin,R4
@@ -172,8 +172,8 @@ FBOXopen:	ldw	A6,#$8300	;Set start of filename grid
 	beq	13$
 12$:	avw	#$11,A6	;Otherwise go to next filename
 	dex
-	bne	12$	;Keep on to fname index 
-13$:	ldy 	#$00		;Now move filename 
+	bne	12$	;Keep on to fname index
+13$:	ldy 	#$00		;Now move filename
 14$:	lda	(A6),y	;   onto valid position
 	sta	(A5),y
 	iny
@@ -285,11 +285,11 @@ XUpRead:	cpw	XBufRdPtr,XBufWrPtr
 	bne	30$
 	inx
 30$:	lda	(A6),y
-	rts	
+	rts
 
 XUpBadBlk:	inc	XErrors
 	jsr	XUpdBox
-	rts	
+	rts
 
 XferBox:	jsr	$c1a8	; i_GraphicsString
 	.byte	$01,$5b,$00,$42	; MOVEPENTO Xl,Xh,Y
@@ -308,7 +308,7 @@ XferBox:	jsr	$c1a8	; i_GraphicsString
 	.byte	$02,$d8,$00,$68	; line
 	.byte	$01,$d8,$00,$60	; movepento
 	.byte	$02,$d0,$00,$68	; line
-	
+
 	.byte	$06,$6b,$00,$65,$18,"Errors:",27,0
 	jsr	$c1a8	; i_GraphicsString
 	.byte	$06,$6b,$00,$56,$18,"Bytes:",27,0
@@ -347,7 +347,7 @@ XUpdBox:	lda	#0
 	rts		; exit from screen routine
 
 
-XAbortChk:	
+XAbortChk:
 	ldb	R2L,#$60
 	ldb	R2H,#$68
 	ldw	R3,#$00d0
@@ -367,7 +367,7 @@ XAbortChk:
 90$:	clc
 	rts
 
-DoXDownload: 
+DoXDownload:
 	jsr	GotoFirstMenu
 	jsr	SavColorScn
 	jsr	ScreenSafe
@@ -481,7 +481,7 @@ XDnRcvByte:	pha
 	ldy	#0
 	pla
 	sta	(A6),y
-	rts	
+	rts
 
 XDnFlush:	cwi	XBufWrPtr,#BACK_SCR_BASE
 	bne	10$
@@ -558,8 +558,8 @@ FBOXmvnm:
 	cmp	#$a0	;so that a 0 can be added
 	beq	18$	;and thus be readable by
 	sta	FBOXdnam,y	;the dialog box routines
-	iny		
-	cmp	#$a0	
+	iny
+	cmp	#$a0
 	beq	18$
 	cpy	#18
 	bne	17$
@@ -572,7 +572,7 @@ FBOXcrve:	jsr	GetDirHead	;get BAM into memory
 	cpx	#0
 	bne	99$	; exit on disk error
 	ldw	R5,#$8200	;point to BAM
-	jsr	CalcBlksFree	
+	jsr	CalcBlksFree
 	lda	R4H
 	bne	11$
 	lda	R4L
@@ -609,7 +609,7 @@ FBOXcbox:	.byte	$80 | $01
 	.word	FBOXtxt5
 	.byte	13	;GetString
 	.byte	$1a,$26	;XOffset.Yalso
-	.byte	A5	
+	.byte	A5
 	.byte	16	;maximum # of chars to accept.
 	.byte	15	; do graphics table
 	.word	FBOXgfx
@@ -688,7 +688,7 @@ FBOXtxt2:	.byte	$18,"existing file",27,0
 FBOXtxt3:	.byte	$18,"to deskTop",27,0
 FBOXtxt4:  	.byte	$18,"On Disk:",27,0
 FBOXtxt5:	.byte	$18,"Please enter new filename:",27,0
-FBOXtxt6:  	.byte	$18,"Enter new file name:",27,0		
+FBOXtxt6:  	.byte	$18,"Enter new file name:",27,0
 FBOXtxt7:  	.byte	$18,"Insert new disk into disk drive.",27,0
 FBOXtxt8:  	.byte	$18,"ERROR: File exists!",27,0
 FBOXtxt9:  	.byte	$18,"ERROR: Disk full!",27,0
