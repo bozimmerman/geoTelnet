@@ -5,11 +5,6 @@ Home Page: http://www.zimmers.net/geos/
 
 geoTelnet is an ansi terminal program for connecting to telnet servers.  It is compatible with the following operating systems: GEOS 64 2.0, GEOS 128 2.0, Wheels 64 4.0+, Wheels 128 4.0+, MegaPatch 3.0 64, MegaPatch 3.0 128, gateWay 64, and gateWay 128.  It requires a 40 column composite monitor, C64Net WiFi Modem, disk drive, and mouse or joystick. A GEOS compatible ram expansion unit (REU) is optional, but beneficial.
 
-The C64Net WiFi Modem can be constructed from schematics by going to:
-http://coffeemud.net:8080/ctcug/index.php/Inexpensive_Wireless_Internet_Modem
-It can also be purchased from:
-https://electronicsisfun.com/c64net-wifi
-
 Features include:
 80 column text output in a 40 column monitor screen.
 ANSI X3.64 terminal support, or as much I could manage.
@@ -30,4 +25,19 @@ In addition to the given source, you'll require several components from the geoM
 https://github.com/bozimmerman/geoModules
 
 You can link directly from the given object code, or built from scratch, provided the necessary geoModules include files and object files are present, and the F/geoTelnet.rel font file.
+
+Configureing and Using:
+geoTelnet is optimized to work with the C64Net WiFi modem from www.electronicsisfun.com.  The next best option is a user port wifi modem that uses the "Zimodem" firmware.  Information about this can be found at github.com/bozimmerman/Zimodem .  Next best is a wifi modem that supports AT commands, a DCD signal that goes high when the modem is online, and defaults to RTS/CTS flow control.  However, the program can also be used with any C= user port wifi modem for the C64 or C128 that defaults at 1200 baud.
+
+The C64Net WiFi Modem can be constructed from schematics by going to:
+http://coffeemud.net:8080/ctcug/index.php/Inexpensive_Wireless_Internet_Modem
+It can also be purchased from:
+https://electronicsisfun.com/c64net-wifi
+
+At startup, the program will set the baud rate to 1200 and issue the following commands: "atze0v1x1f0q0r1&p0i0".  This command resets the modem, turns off modem echo, turns on verbose messages, RTS/CTS flow control, standard cariage returns, ASCII command mode, and then sends the modem status message. Also, by default, the program starts in DCD-active mode, and local echo turned on.
+
+If your modem does not support the DCD signal, you will need to select the geoTelnet application in deskTop and bring up the Information page for the app.  At the bottom is the information area which, in some versions of GEOS, can be edited.  If you can edit this area, add the -D characters to this area.  This will de-activate DCD signal-sensitive menus.
+
+
+
 
